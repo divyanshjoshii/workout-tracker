@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Dumbbell, Plus } from "lucide-react"
-import { revalidatePath } from "next/cache"
+import { Card, CardContent } from "@/components/ui/card"
+import { Dumbbell, LogOut, Settings } from "lucide-react"
+import Link from "next/link"
+import { BodyWeightWidget } from "@/components/dashboard/body-weight-widget"
 
-export default async function Home() {
+export default async function DashboardPage() {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -14,60 +15,115 @@ export default async function Home() {
     redirect("/login")
   }
 
-  async function signOut() {
-    "use server"
-    const supabase = await createClient()
-    await supabase.auth.signOut()
-    revalidatePath("/")
-    redirect("/login")
-  }
+  // 1. Fetch Profile Name
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("display_name")
+    .eq("id", user.id)
+    .single()
+
+  const displayName = profile?.display_name || user.email?.split("@")[0] || "Athlete"
+
+  // 2. Fetch Last Workout
+  const { data: lastWorkout } = await supabase
+    .from("workout_sessions")
+    .select("name, created_at, duration_seconds")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single()
+
+  // 3. Fetch Workouts This Week
+  const oneWeekAgo = new Date()
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+  const { count: weeklyWorkouts } = await supabase
+    .from("workout_sessions")
+    .select("*", { count: 'exact', head: true })
+    .eq("user_id", user.id)
+    .gte("created_at", oneWeekAgo.toISOString())
+
+  // 4. Fetch Latest Body Weight
+  const { data: latestWeight } = await supabase
+    .from("body_weight_entries")
+    .select("weight")
+    .eq("user_id", user.id)
+    .order("date", { ascending: false })
+    .limit(1)
+    .single()
 
   return (
-    <div className="flex flex-col p-4 space-y-6 max-w-lg mx-auto">
+    <div className="flex flex-col p-4 space-y-6 max-w-lg mx-auto pb-24">
+      {/* Header */}
       <header className="flex items-center justify-between mt-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground text-sm">Welcome back!</p>
+          <p className="text-muted-foreground text-sm">Welcome back, {displayName}!</p>
         </div>
-        <form action={signOut}>
-          <Button variant="outline" size="sm" type="submit">Logout</Button>
+        <form action="/auth/signout" method="post">
+          <Button variant="ghost" size="sm" type="submit" className="text-muted-foreground hover:text-foreground">
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
         </form>
       </header>
 
-      <Button size="lg" className="w-full text-lg h-14 font-semibold shadow-md">
-        <Dumbbell className="mr-2 h-6 w-6" /> Start Workout
-      </Button>
+      {/* Main Call to Action */}
+      <Link href="/workout">
+        <Button className="w-full h-14 text-lg font-semibold shadow-md bg-primary hover:bg-primary/90 text-primary-foreground">
+          <Dumbbell className="mr-2 h-5 w-5" />
+          Start Workout
+        </Button>
+      </Link>
 
-      <div className="grid gap-4">
-        <Card className="border-border bg-card shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Last Workout</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">Push Day</div>
-            <p className="text-xs text-muted-foreground mt-1">Bench Press: 45kg × 8</p>
-          </CardContent>
-        </Card>
+      <div className="space-y-4">
+        {/* Last Workout */}
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Last Workout</h2>
+          <Card className="border-border bg-card/50">
+            <CardContent className="p-4">
+              {lastWorkout ? (
+                <>
+                  <div className="font-bold text-lg">{lastWorkout.name}</div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    {new Date(lastWorkout.created_at).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+                    {lastWorkout.duration_seconds ? ` • ${Math.round(lastWorkout.duration_seconds / 60)} min` : ""}
+                  </div>
+                </>
+              ) : (
+                <div className="text-muted-foreground py-2">No workouts completed yet. Time to hit the gym!</div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
+        {/* Mini Stats Grid */}
         <div className="grid grid-cols-2 gap-4">
-          <Card className="border-border bg-card shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">This Week</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">3</div>
-              <p className="text-xs text-muted-foreground mt-1">Workouts</p>
+          <Card className="border-border bg-card">
+            <CardContent className="p-4 flex flex-col justify-between h-full">
+              <div className="text-sm font-medium text-muted-foreground mb-4">This Week</div>
+              <div>
+                <div className="text-3xl font-bold text-primary">{weeklyWorkouts || 0}</div>
+                <div className="text-xs text-muted-foreground mt-1">Workouts</div>
+              </div>
             </CardContent>
           </Card>
-          <Card className="border-border bg-card shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Body Weight</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-secondary">48.5<span className="text-sm font-normal text-muted-foreground ml-1">kg</span></div>
-              <p className="text-xs text-muted-foreground mt-1">Latest entry</p>
-            </CardContent>
-          </Card>
+          
+          <BodyWeightWidget latestWeight={latestWeight?.weight || null} />
+        </div>
+
+        {/* Quick Links */}
+        <div className="grid grid-cols-2 gap-4 pt-4">
+          <Link href="/splits">
+            <Button variant="outline" className="w-full border-border bg-card hover:bg-accent text-foreground">
+              <Settings className="w-4 h-4 mr-2 text-muted-foreground" />
+              Manage Splits
+            </Button>
+          </Link>
+          <Link href="/progress">
+            <Button variant="outline" className="w-full border-border bg-card hover:bg-accent text-foreground">
+              View History
+            </Button>
+          </Link>
         </div>
       </div>
     </div>
