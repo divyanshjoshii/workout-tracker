@@ -1,9 +1,9 @@
 {
   "name": "Workout Tracker",
   "short_name": "Workout",
-  "description": "Mobile-first PWA workout tracker",
-  "start_url": "/",
+  "description": "Track your workouts easily.",
   "display": "standalone",
+  "start_url": "/",
   "background_color": "#0B0F14",
   "theme_color": "#0B0F14",
   "icons": [
