@@ -12,7 +12,6 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Workout Tracker",
   description: "Mobile-first PWA workout tracker",
-  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
