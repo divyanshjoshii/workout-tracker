@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 
-export async function startWorkout(splitDayId: string | null) {
+export async function startWorkout(splitDayId: string | null, formData?: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -31,7 +31,7 @@ export async function startWorkout(splitDayId: string | null) {
       user_id: user.id,
       split_day_id: splitDayId,
       name,
-      date: new Date().toISOString().split('T')[0] // YYYY-MM-DD
+      date: formData?.get('localDate') as string || new Date().toISOString().split('T')[0]
     })
     .select()
     .single()
@@ -119,7 +119,7 @@ export async function saveAsTemplate(sessionId: string, templateName: string) {
   return template.id
 }
 
-export async function startWorkoutFromTemplate(templateId: string) {
+export async function startWorkoutFromTemplate(templateId: string, formData?: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error("Not authenticated")
@@ -145,7 +145,7 @@ export async function startWorkoutFromTemplate(templateId: string) {
     .insert({
       user_id: user.id,
       name: template.name,
-      date: new Date().toISOString().split('T')[0]
+      date: formData?.get('localDate') as string || new Date().toISOString().split('T')[0]
     })
     .select()
     .single()

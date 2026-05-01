@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Dumbbell, Plus, Copy } from "lucide-react"
 import Link from "next/link"
 import { startWorkout, startWorkoutFromTemplate } from "./actions"
+import { ClientDateInput } from "./client-date-input"
 
 export default async function WorkoutStartPage() {
   const supabase = await createClient()
@@ -57,6 +58,7 @@ export default async function WorkoutStartPage() {
           <CardContent className="space-y-3">
             {splitDays.map((day: any) => (
               <form key={day.id} action={startWorkout.bind(null, day.id)}>
+                <ClientDateInput />
                 <Button type="submit" variant="outline" className="w-full justify-between h-14 text-lg font-medium border-border hover:bg-primary hover:text-primary-foreground hover:border-primary">
                   <span>Day {day.day_order}: {day.name}</span>
                   <Plus className="h-5 w-5 opacity-50" />
@@ -100,6 +102,7 @@ export default async function WorkoutStartPage() {
             <CardContent className="space-y-3">
               {templates.map((template: any) => (
                 <form key={template.id} action={startWorkoutFromTemplate.bind(null, template.id)}>
+                  <ClientDateInput />
                   <Button type="submit" variant="outline" className="w-full justify-between h-14 text-lg font-medium border-border hover:bg-primary hover:text-primary-foreground hover:border-primary">
                     <span>{template.name}</span>
                     <Plus className="h-5 w-5 opacity-50" />
@@ -121,6 +124,7 @@ export default async function WorkoutStartPage() {
       </div>
 
       <form action={startWorkout.bind(null, null)}>
+        <ClientDateInput />
         <Button type="submit" size="lg" variant="secondary" className="w-full text-lg h-14 font-semibold">
           Freestyle Workout
         </Button>
