@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts"
 import { Database } from "@/types/database"
 import { Activity, Calendar } from "lucide-react"
+import Link from "next/link"
 
 type Session = Database["public"]["Tables"]["workout_sessions"]["Row"]
 type WeightEntry = Database["public"]["Tables"]["body_weight_entries"]["Row"]
@@ -78,34 +79,36 @@ export function ProgressClient({ sessions, weightEntries }: ProgressClientProps)
         <div className="space-y-3">
           {sessions.length > 0 ? (
             sessions.map(session => (
-              <Card key={session.id} className="border-border bg-card/50">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold text-foreground">{session.name}</div>
-                    <div className="flex items-center text-xs text-muted-foreground mt-1">
-                      <Calendar className="w-3 h-3 mr-1" />
-                      {new Date(session.created_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+              <Link key={session.id} href={`/workout/${session.id}/edit`} className="block">
+                <Card className="border-border bg-card/50 hover:bg-card transition-colors cursor-pointer">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold text-foreground">{session.name}</div>
+                      <div className="flex items-center text-xs text-muted-foreground mt-1">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        {new Date(session.created_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    {session.feeling && (
-                      <div className={`text-xs font-medium px-2 py-1 rounded-md inline-block ${
-                        session.feeling === 'Easy' ? 'bg-primary/20 text-primary' :
-                        session.feeling === 'Hard' ? 'bg-destructive/20 text-destructive' :
-                        'bg-secondary/20 text-secondary'
-                      }`}>
-                        {session.feeling}
-                      </div>
-                    )}
-                    {session.duration_seconds && (
-                      <div className="text-xs text-muted-foreground mt-1 flex items-center justify-end">
-                        <Activity className="w-3 h-3 mr-1" />
-                        {Math.round(session.duration_seconds / 60)} min
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                    <div className="text-right">
+                      {session.feeling && (
+                        <div className={`text-xs font-medium px-2 py-1 rounded-md inline-block ${
+                          session.feeling === 'Easy' ? 'bg-primary/20 text-primary' :
+                          session.feeling === 'Hard' ? 'bg-destructive/20 text-destructive' :
+                          'bg-secondary/20 text-secondary'
+                        }`}>
+                          {session.feeling}
+                        </div>
+                      )}
+                      {session.duration_seconds && (
+                        <div className="text-xs text-muted-foreground mt-1 flex items-center justify-end">
+                          <Activity className="w-3 h-3 mr-1" />
+                          {Math.round(session.duration_seconds / 60)} min
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             ))
           ) : (
             <div className="text-sm text-muted-foreground py-8 text-center border border-dashed border-border rounded-lg">

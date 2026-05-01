@@ -52,3 +52,32 @@ export async function logBodyWeight(formData: FormData) {
   revalidatePath("/")
   revalidatePath("/progress")
 }
+
+export async function createPastWorkout(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) throw new Error("Not authenticated")
+
+  const name = formData.get("name") as string || "Past Workout"
+  const date = formData.get("date") as string
+  const durationMinsStr = formData.get("duration") as string
+  
+  const durationSecs = durationMinsStr ? parseInt(durationMinsStr) * 60 : null
+
+  const { data: session, error } = await supabase
+    .from("workout_sessions")
+    .insert({
+      user_id: user.id,
+      name,
+      date,
+      duration_seconds: durationSecs,
+      feeling: "Medium"
+    })
+    .select()
+    .single()
+
+  if (error) throw new Error(error.message)
+
+  return session.id
+}

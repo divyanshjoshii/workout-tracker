@@ -1,14 +1,14 @@
 "use client"
 
-import { useState, useTransition, useEffect } from "react"
+import { useState, useTransition } from "react"
 import { Database } from "@/types/database"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Check, Plus, Trash2, Timer, Play, X } from "lucide-react"
-import { finishWorkout } from "@/app/workout/actions"
+import { Check, Plus, Trash2, Calendar, Clock, Save } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 type Exercise = Database["public"]["Tables"]["exercises"]["Row"]
 type Session = Database["public"]["Tables"]["workout_sessions"]["Row"]
@@ -18,62 +18,26 @@ type WorkoutExercise = Database["public"]["Tables"]["workout_exercises"]["Row"] 
   workout_sets: WorkoutSet[]
 }
 
-interface ActiveWorkoutProps {
+interface EditWorkoutProps {
   session: Session
   initialWorkoutExercises: WorkoutExercise[]
   allExercises: Exercise[]
 }
 
-export function ActiveWorkout({ session, initialWorkoutExercises, allExercises }: ActiveWorkoutProps) {
+export function EditWorkout({ session, initialWorkoutExercises, allExercises }: EditWorkoutProps) {
+  const router = useRouter()
   const [workoutExercises, setWorkoutExercises] = useState<WorkoutExercise[]>(initialWorkoutExercises)
   const [isAddExerciseOpen, setIsAddExerciseOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [isPending, startTransition] = useTransition()
-  const [feeling, setFeeling] = useState<"Easy" | "Medium" | "Hard">("Medium")
   
-  // Local state for completed sets (just UI feedback)
-  const [completedSets, setCompletedSets] = useState<Record<string, boolean>>({})
-
-  // Rest Timer State
-  const [restTimeLeft, setRestTimeLeft] = useState<number | null>(null)
-  const [isRestTimerActive, setIsRestTimerActive] = useState(false)
+  // Session details
+  const [name, setName] = useState(session.name)
+  const [date, setDate] = useState(session.date)
+  const [durationMinutes, setDurationMinutes] = useState(session.duration_seconds ? Math.round(session.duration_seconds / 60) : "")
+  const [feeling, setFeeling] = useState(session.feeling || "Medium")
 
   const supabase = createClient()
-
-  // --- Timer Logic ---
-  useEffect(() => {
-    let interval: NodeJS.Timeout
-    if (isRestTimerActive && restTimeLeft !== null && restTimeLeft > 0) {
-      interval = setInterval(() => {
-        setRestTimeLeft(prev => (prev !== null && prev > 0 ? prev - 1 : 0))
-      }, 1000)
-    } else if (restTimeLeft === 0) {
-      setIsRestTimerActive(false)
-      // Optional: Play a sound or vibrate here when rest is over
-    }
-    return () => clearInterval(interval)
-  }, [isRestTimerActive, restTimeLeft])
-
-  function startRestTimer(seconds: number) {
-    setRestTimeLeft(seconds)
-    setIsRestTimerActive(true)
-  }
-
-  function stopRestTimer() {
-    setIsRestTimerActive(false)
-    setRestTimeLeft(null)
-  }
-
-  function toggleSetComplete(setId: string) {
-    setCompletedSets(prev => {
-      const isNowComplete = !prev[setId]
-      if (isNowComplete) {
-        // Auto-start a 90s rest timer when completing a set
-        startRestTimer(90)
-      }
-      return { ...prev, [setId]: isNowComplete }
-    })
-  }
 
   // --- Actions ---
   async function addExercise(exerciseId: string) {
@@ -101,7 +65,7 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises }
     const setNumber = targetWe.workout_sets.length + 1
     const prevSet = targetWe.workout_sets[targetWe.workout_sets.length - 1]
     const weight = prevSet ? prevSet.weight : null
-    const reps = prevSet ? prevSet.reps : null // Default to null for clean UI, or use prev
+    const reps = prevSet ? prevSet.reps : null
 
     const { data: newSet, error } = await supabase
       .from("workout_sets")
@@ -157,39 +121,71 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises }
     await supabase.from("workout_sets").delete().eq("id", setId)
   }
 
-  function handleFinish() {
+  function handleSave() {
     startTransition(async () => {
-      const start = new Date(session.created_at).getTime()
-      const end = new Date().getTime()
-      const durationSeconds = Math.floor((end - start) / 1000)
+      const durationSecs = durationMinutes ? Number(durationMinutes) * 60 : null
+      
+      await supabase
+        .from("workout_sessions")
+        .update({
+          name,
+          date,
+          feeling,
+          duration_seconds: durationSecs
+        })
+        .eq("id", session.id)
 
-      await finishWorkout(session.id, durationSeconds, feeling, "Completed successfully")
+      router.push("/progress")
+      router.refresh()
     })
   }
 
   // --- Render ---
   const filteredExercises = allExercises.filter(e => e.name.toLowerCase().includes(searchQuery.toLowerCase()))
 
-  function formatTime(seconds: number) {
-    const m = Math.floor(seconds / 60)
-    const s = seconds % 60
-    return `${m}:${s.toString().padStart(2, '0')}`
-  }
-
   return (
-    <div className="flex flex-col p-4 space-y-6 max-w-lg mx-auto pb-32">
+    <div className="flex flex-col p-4 space-y-6 max-w-lg mx-auto pb-24">
       <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{session.name}</h1>
-          <div className="flex items-center text-sm text-muted-foreground mt-1">
-            <Play className="w-4 h-4 mr-1 text-primary" />
-            <span>Workout in progress</span>
-          </div>
-        </div>
-        <Button onClick={handleFinish} disabled={isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
-          <Check className="w-4 h-4 mr-2" /> Finish
+        <h1 className="text-2xl font-bold tracking-tight">Edit Workout</h1>
+        <Button onClick={handleSave} disabled={isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
+          <Save className="w-4 h-4 mr-2" /> Save
         </Button>
       </header>
+
+      {/* Session Details */}
+      <Card className="border-border bg-card">
+        <CardContent className="pt-6 space-y-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Workout Name</label>
+            <Input 
+              value={name} 
+              onChange={(e) => setName(e.target.value)} 
+              className="bg-background border-border"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center"><Calendar className="w-3 h-3 mr-1" /> Date</label>
+              <Input 
+                type="date" 
+                value={date} 
+                onChange={(e) => setDate(e.target.value)} 
+                className="bg-background border-border"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center"><Clock className="w-3 h-3 mr-1" /> Duration (mins)</label>
+              <Input 
+                type="number" 
+                value={durationMinutes} 
+                onChange={(e) => setDurationMinutes(e.target.value)} 
+                className="bg-background border-border"
+                placeholder="e.g. 45"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="space-y-6">
         {workoutExercises.map((we) => (
@@ -201,20 +197,17 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises }
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="grid grid-cols-[3rem_1fr_1fr_3rem_3rem] gap-2 text-xs font-semibold text-muted-foreground uppercase text-center mb-2">
+                <div className="grid grid-cols-[3rem_1fr_1fr_3rem] gap-2 text-xs font-semibold text-muted-foreground uppercase text-center mb-2">
                   <span>Set</span>
                   <span>kg</span>
                   <span>Reps</span>
-                  <span>Done</span>
                   <span></span>
                 </div>
                 
                 {we.workout_sets
                   .sort((a, b) => a.set_number - b.set_number)
-                  .map((set, idx) => {
-                    const isCompleted = completedSets[set.id]
-                    return (
-                    <div key={set.id} className={`grid grid-cols-[3rem_1fr_1fr_3rem_3rem] gap-2 items-center transition-colors rounded-md p-1 ${isCompleted ? 'bg-primary/10' : ''}`}>
+                  .map((set, idx) => (
+                    <div key={set.id} className="grid grid-cols-[3rem_1fr_1fr_3rem] gap-2 items-center">
                       <div className="text-center font-medium bg-secondary/20 text-secondary rounded-md h-9 flex items-center justify-center">
                         {idx + 1}
                       </div>
@@ -223,23 +216,15 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises }
                         placeholder="--"
                         value={set.weight ?? ""}
                         onChange={(e) => updateSet(we.id, set.id, "weight", e.target.value)}
-                        className={`h-9 text-center bg-background border-border ${isCompleted ? 'opacity-70 text-primary border-primary/50' : ''}`}
+                        className="h-9 text-center bg-background border-border"
                       />
                       <Input
                         type="number"
                         placeholder="--"
                         value={set.reps || ""}
                         onChange={(e) => updateSet(we.id, set.id, "reps", e.target.value)}
-                        className={`h-9 text-center bg-background border-border ${isCompleted ? 'opacity-70 text-primary border-primary/50' : ''}`}
+                        className="h-9 text-center bg-background border-border"
                       />
-                      <Button
-                        variant={isCompleted ? "default" : "secondary"}
-                        size="icon"
-                        className={`h-9 w-full ${isCompleted ? 'bg-primary text-primary-foreground' : ''}`}
-                        onClick={() => toggleSetComplete(set.id)}
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -249,7 +234,7 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises }
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                  )})}
+                  ))}
                 
                 <Button 
                   variant="outline" 
@@ -313,46 +298,24 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises }
         </DialogContent>
       </Dialog>
       
-      {workoutExercises.length > 0 && (
-        <Card className="border-border bg-card mt-8">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base text-center">How did it feel?</CardTitle>
-          </CardHeader>
-          <CardContent className="flex justify-center gap-2">
-            {(["Easy", "Medium", "Hard"] as const).map(f => (
-              <Button
-                key={f}
-                variant={feeling === f ? "default" : "outline"}
-                onClick={() => setFeeling(f)}
-                className={`flex-1 ${feeling === f ? (f === "Easy" ? "bg-primary text-primary-foreground" : f === "Hard" ? "bg-destructive text-destructive-foreground" : "bg-secondary text-secondary-foreground") : "border-border text-muted-foreground"}`}
-              >
-                {f}
-              </Button>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Floating Rest Timer */}
-      {restTimeLeft !== null && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-card border border-border rounded-full shadow-lg shadow-black/50 p-2 flex items-center justify-between z-50">
-          <div className="flex items-center gap-3 pl-2">
-            <Timer className={`w-5 h-5 ${restTimeLeft > 0 ? 'text-primary animate-pulse' : 'text-destructive'}`} />
-            <span className="font-mono text-lg font-bold">
-              {restTimeLeft > 0 ? formatTime(restTimeLeft) : "0:00"}
-            </span>
-          </div>
-          
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-xs font-medium" onClick={() => startRestTimer(restTimeLeft + 30)}>
-              +30s
+      {/* Workout Feeling Selector */}
+      <Card className="border-border bg-card mt-8">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base text-center">How did it feel?</CardTitle>
+        </CardHeader>
+        <CardContent className="flex justify-center gap-2">
+          {(["Easy", "Medium", "Hard"] as const).map(f => (
+            <Button
+              key={f}
+              variant={feeling === f ? "default" : "outline"}
+              onClick={() => setFeeling(f)}
+              className={`flex-1 ${feeling === f ? (f === "Easy" ? "bg-primary text-primary-foreground" : f === "Hard" ? "bg-destructive text-destructive-foreground" : "bg-secondary text-secondary-foreground") : "border-border text-muted-foreground"}`}
+            >
+              {f}
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground" onClick={stopRestTimer}>
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      )}
+          ))}
+        </CardContent>
+      </Card>
     </div>
   )
 }

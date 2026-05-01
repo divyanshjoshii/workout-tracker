@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Dumbbell, LogOut, Settings } from "lucide-react"
 import Link from "next/link"
 import { BodyWeightWidget } from "@/components/dashboard/body-weight-widget"
+import { LogPastWorkout } from "@/components/dashboard/log-past-workout"
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -68,12 +69,15 @@ export default async function DashboardPage() {
       </header>
 
       {/* Main Call to Action */}
-      <Link href="/workout">
-        <Button className="w-full h-14 text-lg font-semibold shadow-md bg-primary hover:bg-primary/90 text-primary-foreground">
-          <Dumbbell className="mr-2 h-5 w-5" />
-          Start Workout
-        </Button>
-      </Link>
+      <div className="space-y-3">
+        <Link href="/workout" className="block">
+          <Button className="w-full h-14 text-lg font-semibold shadow-md bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Dumbbell className="mr-2 h-5 w-5" />
+            Start Live Workout
+          </Button>
+        </Link>
+        <LogPastWorkout />
+      </div>
 
       <div className="space-y-4">
         {/* Last Workout */}
