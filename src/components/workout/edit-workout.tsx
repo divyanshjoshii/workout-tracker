@@ -6,9 +6,11 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Check, Plus, Trash2, Calendar, Clock, Save } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
+import { Check, Plus, Trash2, Calendar, Clock, Save, Trash, Copy } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { deleteWorkout } from "@/app/actions"
+import { saveAsTemplate } from "@/app/workout/actions"
 
 type Exercise = Database["public"]["Tables"]["exercises"]["Row"]
 type Session = Database["public"]["Tables"]["workout_sessions"]["Row"]
@@ -22,14 +24,18 @@ interface EditWorkoutProps {
   session: Session
   initialWorkoutExercises: WorkoutExercise[]
   allExercises: Exercise[]
+  targetMuscles?: string[]
 }
 
-export function EditWorkout({ session, initialWorkoutExercises, allExercises }: EditWorkoutProps) {
+export function EditWorkout({ session, initialWorkoutExercises, allExercises, targetMuscles = [] }: EditWorkoutProps) {
   const router = useRouter()
   const [workoutExercises, setWorkoutExercises] = useState<WorkoutExercise[]>(initialWorkoutExercises)
   const [isAddExerciseOpen, setIsAddExerciseOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [showTargetedOnly, setShowTargetedOnly] = useState(targetMuscles.length > 0)
   const [isPending, startTransition] = useTransition()
+  const [templateName, setTemplateName] = useState(session.name + " Template")
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false)
   
   // Session details
   const [name, setName] = useState(session.name)
@@ -121,6 +127,28 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises }: 
     await supabase.from("workout_sets").delete().eq("id", setId)
   }
 
+  function handleDelete() {
+    if (confirm("Are you sure you want to delete this workout? This action cannot be undone.")) {
+      startTransition(async () => {
+        await deleteWorkout(session.id)
+        router.push("/progress")
+        router.refresh()
+      })
+    }
+  }
+
+  function handleSaveTemplate() {
+    startTransition(async () => {
+      try {
+        await saveAsTemplate(session.id, templateName)
+        setIsTemplateDialogOpen(false)
+        alert("Template saved successfully!")
+      } catch (err: any) {
+        alert(err.message || "Failed to save template")
+      }
+    })
+  }
+
   function handleSave() {
     startTransition(async () => {
       const durationSecs = durationMinutes ? Number(durationMinutes) * 60 : null
@@ -141,15 +169,53 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises }: 
   }
 
   // --- Render ---
-  const filteredExercises = allExercises.filter(e => e.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  let filteredExercises = allExercises.filter(e => e.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  
+  if (showTargetedOnly && targetMuscles.length > 0) {
+    filteredExercises = filteredExercises.filter(e => targetMuscles.includes(e.muscle_group))
+  }
 
   return (
     <div className="flex flex-col p-4 space-y-6 max-w-lg mx-auto pb-24">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Edit Workout</h1>
-        <Button onClick={handleSave} disabled={isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
-          <Save className="w-4 h-4 mr-2" /> Save
-        </Button>
+        <div className="flex gap-2">
+          <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+            <DialogTrigger className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3">
+              <Copy className="h-4 w-4 mr-2" />
+              Save as Template
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md w-[95vw] rounded-xl bg-card border-border">
+              <DialogHeader>
+                <DialogTitle>Save as Template</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Template Name</label>
+                  <Input 
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    placeholder="e.g., Heavy Pull Day"
+                    className="bg-background"
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  This will save the current exercises in this workout as a reusable template.
+                </p>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsTemplateDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleSaveTemplate} disabled={isPending || !templateName}>
+                  {isPending ? "Saving..." : "Save Template"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Button onClick={handleSave} disabled={isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-9 px-4">
+            <Save className="w-4 h-4 mr-2" /> Save
+          </Button>
+        </div>
       </header>
 
       {/* Session Details */}
@@ -263,6 +329,26 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises }: 
               onChange={(e) => setSearchQuery(e.target.value)}
               className="mt-4 bg-card border-border"
             />
+            {targetMuscles.length > 0 && (
+              <div className="flex items-center mt-3 gap-2">
+                <Button 
+                  variant={showTargetedOnly ? "default" : "outline"} 
+                  size="sm" 
+                  onClick={() => setShowTargetedOnly(true)}
+                  className="text-xs h-8"
+                >
+                  Target Muscles ({targetMuscles.join(', ')})
+                </Button>
+                <Button 
+                  variant={!showTargetedOnly ? "default" : "outline"} 
+                  size="sm" 
+                  onClick={() => setShowTargetedOnly(false)}
+                  className="text-xs h-8"
+                >
+                  All
+                </Button>
+              </div>
+            )}
           </DialogHeader>
           <div className="flex-1 overflow-y-auto p-2">
             <div className="space-y-1">
@@ -316,6 +402,18 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises }: 
           ))}
         </CardContent>
       </Card>
+
+      <div className="pt-8">
+        <Button 
+          variant="destructive" 
+          onClick={handleDelete} 
+          disabled={isPending}
+          className="w-full h-12 bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground border border-destructive/20"
+        >
+          <Trash className="w-4 h-4 mr-2" />
+          Delete Workout
+        </Button>
+      </div>
     </div>
   )
 }

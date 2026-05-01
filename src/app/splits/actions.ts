@@ -13,11 +13,13 @@ export async function createSplit(formData: FormData) {
   }
 
   const name = formData.get("name") as string
-  const days = formData.getAll("days[]") as string[]
-
-  if (!name || days.length === 0) {
+  const daysJson = formData.get("days_json") as string
+  
+  if (!name || !daysJson) {
     throw new Error("Missing required fields")
   }
+
+  const days = JSON.parse(daysJson) as { name: string, targets: string[] }[]
 
   // 1. Create the split
   const { data: split, error: splitError } = await supabase
@@ -35,10 +37,11 @@ export async function createSplit(formData: FormData) {
   }
 
   // 2. Insert the days
-  const splitDaysData = days.map((dayName, index) => ({
+  const splitDaysData = days.map((day, index) => ({
     split_id: split.id,
-    name: dayName,
-    day_order: index + 1
+    name: day.name,
+    day_order: index + 1,
+    target_muscles: day.targets
   }))
 
   const { error: daysError } = await supabase

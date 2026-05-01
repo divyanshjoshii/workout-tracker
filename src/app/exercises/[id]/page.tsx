@@ -37,13 +37,20 @@ export default async function ExerciseDetailPage({ params }: { params: Promise<{
   return (
     <div className="flex flex-col bg-background min-h-screen pb-20">
       {/* Header Image Placeholder / Gradient */}
-      <div className="h-48 w-full bg-gradient-to-b from-primary/20 to-background flex items-end p-4 relative">
-        <Link href="/exercises" className="absolute top-4 left-4">
+      <div className={`h-64 w-full flex items-end p-4 relative ${!exercise.image_url ? 'bg-gradient-to-b from-primary/20 to-background' : 'bg-muted'}`}>
+        {exercise.image_url && (
+          <img 
+            src={exercise.image_url} 
+            alt={exercise.name} 
+            className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-60"
+          />
+        )}
+        <Link href="/exercises" className="absolute top-4 left-4 z-10">
           <Button variant="secondary" size="icon" className="rounded-full bg-background/50 backdrop-blur-md border-border">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
-        <div className="absolute top-4 right-4 bg-background/50 backdrop-blur-md rounded-full p-1 border border-border">
+        <div className="absolute top-4 right-4 bg-background/50 backdrop-blur-md rounded-full p-1 border border-border z-10">
           <FavoriteButton exerciseId={exercise.id} userId={user.id} initialIsFavorite={isFavorite} />
         </div>
       </div>

@@ -105,6 +105,7 @@ export interface Database {
           name: string
           day_order: number
           created_at: string
+          target_muscles: string[] | null
         }
         Insert: {
           id?: string
@@ -112,6 +113,7 @@ export interface Database {
           name: string
           day_order: number
           created_at?: string
+          target_muscles?: string[] | null
         }
         Update: {
           id?: string
@@ -119,6 +121,7 @@ export interface Database {
           name?: string
           day_order?: number
           created_at?: string
+          target_muscles?: string[] | null
         }
       }
       workout_sessions: {
@@ -264,6 +267,7 @@ export interface Database {
           exercise_id: string
           exercise_order: number
           created_at: string
+          target_sets: number | null
         }
         Insert: {
           id?: string
@@ -271,6 +275,7 @@ export interface Database {
           exercise_id: string
           exercise_order: number
           created_at?: string
+          target_sets?: number | null
         }
         Update: {
           id?: string
@@ -278,6 +283,7 @@ export interface Database {
           exercise_id?: string
           exercise_order?: number
           created_at?: string
+          target_sets?: number | null
         }
       }
     }

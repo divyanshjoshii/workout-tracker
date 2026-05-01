@@ -24,6 +24,18 @@ export default async function WorkoutSessionPage({ params }: { params: Promise<{
     redirect("/workout")
   }
 
+  let targetMuscles: string[] = []
+  if (session.split_day_id) {
+    const { data: splitDay } = await supabase
+      .from("split_days")
+      .select("target_muscles")
+      .eq("id", session.split_day_id)
+      .single()
+    if (splitDay && splitDay.target_muscles) {
+      targetMuscles = splitDay.target_muscles
+    }
+  }
+
   // Fetch existing workout exercises with their sets
   const { data: workoutExercises } = await supabase
     .from("workout_exercises")
@@ -46,6 +58,7 @@ export default async function WorkoutSessionPage({ params }: { params: Promise<{
       session={session} 
       initialWorkoutExercises={(workoutExercises as any) || []} 
       allExercises={allExercises || []} 
+      targetMuscles={targetMuscles}
     />
   )
 }

@@ -2,9 +2,9 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Dumbbell, Plus } from "lucide-react"
+import { Dumbbell, Plus, Copy } from "lucide-react"
 import Link from "next/link"
-import { startWorkout } from "./actions"
+import { startWorkout, startWorkoutFromTemplate } from "./actions"
 
 export default async function WorkoutStartPage() {
   const supabase = await createClient()
@@ -25,6 +25,13 @@ export default async function WorkoutStartPage() {
     .eq("user_id", user.id)
     .eq("is_active", true)
     .single()
+
+  // Fetch all templates
+  const { data: templates } = await supabase
+    .from("workout_templates")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
 
   // We need an array of split_days sorted by order
   const splitDays = activeSplit?.split_days?.sort((a: any, b: any) => a.day_order - b.day_order) || []
@@ -72,7 +79,39 @@ export default async function WorkoutStartPage() {
         </Card>
       )}
 
-      <div className="relative">
+      {templates && templates.length > 0 && (
+        <>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">Your Templates</span>
+            </div>
+          </div>
+
+          <Card className="border-border bg-card shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-primary flex items-center">
+                <Copy className="mr-2 h-5 w-5" />
+                Saved Templates
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {templates.map((template: any) => (
+                <form key={template.id} action={startWorkoutFromTemplate.bind(null, template.id)}>
+                  <Button type="submit" variant="outline" className="w-full justify-between h-14 text-lg font-medium border-border hover:bg-primary hover:text-primary-foreground hover:border-primary">
+                    <span>{template.name}</span>
+                    <Plus className="h-5 w-5 opacity-50" />
+                  </Button>
+                </form>
+              ))}
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      <div className="relative mt-8">
         <div className="absolute inset-0 flex items-center">
           <span className="w-full border-t border-border" />
         </div>

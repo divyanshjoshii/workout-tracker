@@ -4,23 +4,46 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { ArrowLeft, Plus, Trash2 } from "lucide-react"
+import { ArrowLeft, Plus, Trash2, Check } from "lucide-react"
 import Link from "next/link"
 import { useState, useTransition } from "react"
 import { createSplit } from "../actions"
 
+const MUSCLE_GROUPS = [
+  "Abdominals", "Abductors", "Adductors", "Biceps", "Calves", 
+  "Chest", "Forearms", "Glutes", "Hamstrings", "Lats", 
+  "Lower Back", "Middle Back", "Neck", "Quadriceps", 
+  "Shoulders", "Traps", "Triceps"
+]
+
 export default function NewSplitPage() {
-  const [days, setDays] = useState(["Push", "Pull", "Legs"])
+  const [days, setDays] = useState<{name: string, targets: string[]}[]>([
+    { name: "Push", targets: ["Chest", "Shoulders", "Triceps"] },
+    { name: "Pull", targets: ["Back", "Biceps"] },
+    { name: "Legs", targets: ["Quadriceps", "Hamstrings", "Calves", "Glutes"] }
+  ])
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
   function addDay() {
-    setDays([...days, ""])
+    setDays([...days, { name: "", targets: [] }])
   }
 
-  function updateDay(index: number, value: string) {
+  function updateDayName(index: number, value: string) {
     const newDays = [...days]
-    newDays[index] = value
+    newDays[index].name = value
+    setDays(newDays)
+  }
+
+  function toggleTargetMuscle(dayIndex: number, muscle: string) {
+    const newDays = [...days]
+    const currentTargets = newDays[dayIndex].targets
+    
+    if (currentTargets.includes(muscle)) {
+      newDays[dayIndex].targets = currentTargets.filter(m => m !== muscle)
+    } else {
+      newDays[dayIndex].targets = [...currentTargets, muscle]
+    }
     setDays(newDays)
   }
 
@@ -35,15 +58,14 @@ export default function NewSplitPage() {
     event.preventDefault()
     setError(null)
     
-    // Validate empty days
-    if (days.some(d => d.trim() === "")) {
+    if (days.some(d => d.name.trim() === "")) {
       setError("Please fill in all day names or remove empty ones.")
       return
     }
 
     const formData = new FormData(event.currentTarget)
-    // Add days manually since they might not all be captured properly if names are identical
-    days.forEach(day => formData.append("days[]", day))
+    // Send days as a JSON string to parse safely on the server
+    formData.set("days_json", JSON.stringify(days))
 
     startTransition(async () => {
       try {
@@ -68,7 +90,7 @@ export default function NewSplitPage() {
       <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle>Split Details</CardTitle>
-          <CardDescription>Name your routine and define the days.</CardDescription>
+          <CardDescription>Name your routine and define the targeted muscles for each day.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -77,7 +99,7 @@ export default function NewSplitPage() {
               <Input 
                 id="name" 
                 name="name" 
-                placeholder="e.g., Push Pull Legs" 
+                placeholder="e.g., Bro Split, PPL" 
                 required 
                 className="bg-background"
               />
@@ -91,29 +113,54 @@ export default function NewSplitPage() {
                 </Button>
               </div>
               
-              <div className="space-y-3">
+              <div className="space-y-6">
                 {days.map((day, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-secondary/20 text-secondary text-sm font-bold shrink-0">
-                      {index + 1}
+                  <div key={index} className="p-4 border border-border rounded-lg bg-background/50 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-secondary/20 text-secondary text-sm font-bold shrink-0">
+                        {index + 1}
+                      </div>
+                      <Input
+                        value={day.name}
+                        onChange={(e) => updateDayName(index, e.target.value)}
+                        placeholder="Day Name (e.g., Pull Day)"
+                        required
+                        className="bg-card font-medium"
+                      />
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => removeDay(index)}
+                        disabled={days.length <= 1}
+                        className="text-muted-foreground hover:text-destructive shrink-0"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Input
-                      value={day}
-                      onChange={(e) => updateDay(index, e.target.value)}
-                      placeholder="e.g., Upper Body"
-                      required
-                      className="bg-background"
-                    />
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => removeDay(index)}
-                      disabled={days.length <= 1}
-                      className="text-muted-foreground hover:text-destructive shrink-0"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-2 block">Target Muscle Groups (Filters Exercises)</Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {MUSCLE_GROUPS.map(m => {
+                          const isSelected = day.targets.includes(m)
+                          return (
+                            <button
+                              key={m}
+                              type="button"
+                              onClick={() => toggleTargetMuscle(index, m)}
+                              className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${
+                                isSelected 
+                                  ? "bg-primary text-primary-foreground border-primary" 
+                                  : "bg-card text-muted-foreground border-border hover:border-primary/50"
+                              }`}
+                            >
+                              {m}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -125,7 +172,7 @@ export default function NewSplitPage() {
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={isPending}>
+            <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={isPending}>
               {isPending ? "Saving..." : "Save Split"}
             </Button>
           </form>

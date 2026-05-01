@@ -22,12 +22,14 @@ interface ActiveWorkoutProps {
   session: Session
   initialWorkoutExercises: WorkoutExercise[]
   allExercises: Exercise[]
+  targetMuscles?: string[]
 }
 
-export function ActiveWorkout({ session, initialWorkoutExercises, allExercises }: ActiveWorkoutProps) {
+export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, targetMuscles = [] }: ActiveWorkoutProps) {
   const [workoutExercises, setWorkoutExercises] = useState<WorkoutExercise[]>(initialWorkoutExercises)
   const [isAddExerciseOpen, setIsAddExerciseOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [showTargetedOnly, setShowTargetedOnly] = useState(targetMuscles.length > 0)
   const [isPending, startTransition] = useTransition()
   const [feeling, setFeeling] = useState<"Easy" | "Medium" | "Hard">("Medium")
   
@@ -35,32 +37,52 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises }
   const [completedSets, setCompletedSets] = useState<Record<string, boolean>>({})
 
   // Rest Timer State
+  const [restTargetEndTime, setRestTargetEndTime] = useState<number | null>(null)
   const [restTimeLeft, setRestTimeLeft] = useState<number | null>(null)
-  const [isRestTimerActive, setIsRestTimerActive] = useState(false)
+
+  // Main Workout Timer State
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
   const supabase = createClient()
 
   // --- Timer Logic ---
   useEffect(() => {
-    let interval: NodeJS.Timeout
-    if (isRestTimerActive && restTimeLeft !== null && restTimeLeft > 0) {
-      interval = setInterval(() => {
-        setRestTimeLeft(prev => (prev !== null && prev > 0 ? prev - 1 : 0))
-      }, 1000)
-    } else if (restTimeLeft === 0) {
-      setIsRestTimerActive(false)
-      // Optional: Play a sound or vibrate here when rest is over
-    }
+    const sessionStart = new Date(session.created_at).getTime()
+    
+    const interval = setInterval(() => {
+      // Main timer
+      const now = Date.now()
+      setElapsedSeconds(Math.floor((now - sessionStart) / 1000))
+
+      // Rest timer
+      if (restTargetEndTime !== null) {
+        const remaining = Math.ceil((restTargetEndTime - now) / 1000)
+        if (remaining > 0) {
+          setRestTimeLeft(remaining)
+        } else {
+          setRestTimeLeft(0)
+          setRestTargetEndTime(null)
+          // Optional: Vibrate when rest is over
+          if (typeof window !== "undefined" && window.navigator && window.navigator.vibrate) {
+            window.navigator.vibrate([200, 100, 200])
+          }
+        }
+      }
+    }, 1000)
+
+    // Initial call
+    setElapsedSeconds(Math.floor((Date.now() - sessionStart) / 1000))
+
     return () => clearInterval(interval)
-  }, [isRestTimerActive, restTimeLeft])
+  }, [restTargetEndTime, session.created_at])
 
   function startRestTimer(seconds: number) {
+    setRestTargetEndTime(Date.now() + seconds * 1000)
     setRestTimeLeft(seconds)
-    setIsRestTimerActive(true)
   }
 
   function stopRestTimer() {
-    setIsRestTimerActive(false)
+    setRestTargetEndTime(null)
     setRestTimeLeft(null)
   }
 
@@ -168,7 +190,11 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises }
   }
 
   // --- Render ---
-  const filteredExercises = allExercises.filter(e => e.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  let filteredExercises = allExercises.filter(e => e.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  
+  if (showTargetedOnly && targetMuscles.length > 0) {
+    filteredExercises = filteredExercises.filter(e => targetMuscles.includes(e.muscle_group))
+  }
 
   function formatTime(seconds: number) {
     const m = Math.floor(seconds / 60)
@@ -181,9 +207,9 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises }
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{session.name}</h1>
-          <div className="flex items-center text-sm text-muted-foreground mt-1">
-            <Play className="w-4 h-4 mr-1 text-primary" />
-            <span>Workout in progress</span>
+          <div className="flex items-center text-sm font-mono text-primary mt-1 bg-primary/10 px-2 py-0.5 rounded-full w-fit">
+            <Timer className="w-3.5 h-3.5 mr-1.5" />
+            <span>{formatTime(elapsedSeconds)}</span>
           </div>
         </div>
         <Button onClick={handleFinish} disabled={isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
@@ -278,6 +304,26 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises }
               onChange={(e) => setSearchQuery(e.target.value)}
               className="mt-4 bg-card border-border"
             />
+            {targetMuscles.length > 0 && (
+              <div className="flex items-center mt-3 gap-2">
+                <Button 
+                  variant={showTargetedOnly ? "default" : "outline"} 
+                  size="sm" 
+                  onClick={() => setShowTargetedOnly(true)}
+                  className="text-xs h-8"
+                >
+                  Target Muscles ({targetMuscles.join(', ')})
+                </Button>
+                <Button 
+                  variant={!showTargetedOnly ? "default" : "outline"} 
+                  size="sm" 
+                  onClick={() => setShowTargetedOnly(false)}
+                  className="text-xs h-8"
+                >
+                  All
+                </Button>
+              </div>
+            )}
           </DialogHeader>
           <div className="flex-1 overflow-y-auto p-2">
             <div className="space-y-1">

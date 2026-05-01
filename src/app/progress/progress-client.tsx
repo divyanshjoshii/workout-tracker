@@ -86,7 +86,7 @@ export function ProgressClient({ sessions, weightEntries }: ProgressClientProps)
                       <div className="font-semibold text-foreground">{session.name}</div>
                       <div className="flex items-center text-xs text-muted-foreground mt-1">
                         <Calendar className="w-3 h-3 mr-1" />
-                        {new Date(session.created_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                        {new Date(session.date + 'T12:00:00Z').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                       </div>
                     </div>
                     <div className="text-right">

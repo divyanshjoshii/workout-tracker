@@ -28,7 +28,7 @@ export default async function DashboardPage() {
   // 2. Fetch Last Workout
   const { data: lastWorkout } = await supabase
     .from("workout_sessions")
-    .select("name, created_at, duration_seconds")
+    .select("name, date, created_at, duration_seconds")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -89,7 +89,7 @@ export default async function DashboardPage() {
                 <>
                   <div className="font-bold text-lg">{lastWorkout.name}</div>
                   <div className="text-sm text-muted-foreground mt-1">
-                    {new Date(lastWorkout.created_at).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+                    {new Date(lastWorkout.date + 'T12:00:00Z').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                     {lastWorkout.duration_seconds ? ` • ${Math.round(lastWorkout.duration_seconds / 60)} min` : ""}
                   </div>
                 </>
