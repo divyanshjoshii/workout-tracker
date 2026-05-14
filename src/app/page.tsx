@@ -155,27 +155,33 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      {/* Main Call to Action (Smart Next Workout) */}
-      <div className="space-y-3">
-        {nextSplitDay ? (
-          <form action={startWorkout.bind(null, nextSplitDay.id)} className="block">
-            <Button type="submit" className="w-full h-16 text-lg font-bold shadow-md bg-primary hover:bg-primary/90 text-primary-foreground flex flex-col items-center justify-center relative overflow-hidden group">
-              <div className="absolute inset-0 bg-white/20 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-              <span className="flex items-center text-sm font-medium opacity-90 uppercase tracking-widest mb-0.5">
-                <Play className="w-3.5 h-3.5 mr-1" fill="currentColor" /> Up Next
-              </span>
-              <span>{nextSplitDay.name}</span>
-            </Button>
-          </form>
-        ) : (
+      {/* Main Call to Action */}
+      <div className="space-y-4">
+        {nextSplitDay && (
+          <div className="space-y-2">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Suggested</h2>
+            <form action={startWorkout.bind(null, nextSplitDay.id)} className="block">
+              <Button type="submit" className="w-full h-16 text-lg font-bold shadow-md bg-primary hover:bg-primary/90 text-primary-foreground flex flex-col items-center justify-center relative overflow-hidden group">
+                <div className="absolute inset-0 bg-white/20 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                <span className="flex items-center text-sm font-medium opacity-90 uppercase tracking-widest mb-0.5">
+                  <Play className="w-3.5 h-3.5 mr-1" fill="currentColor" /> Up Next
+                </span>
+                <span>{nextSplitDay.name}</span>
+              </Button>
+            </form>
+          </div>
+        )}
+        
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Manual</h2>
           <Link href="/workout" className="block">
-            <Button className="w-full h-14 text-lg font-semibold shadow-md bg-primary hover:bg-primary/90 text-primary-foreground">
-              <Dumbbell className="mr-2 h-5 w-5" />
-              Start Live Workout
+            <Button variant="outline" className="w-full h-14 text-lg font-semibold shadow-sm border-border bg-card hover:bg-accent">
+              <Dumbbell className="mr-2 h-5 w-5 text-primary" />
+              Select Template or Freestyle
             </Button>
           </Link>
-        )}
-        <LogPastWorkout />
+          <LogPastWorkout />
+        </div>
       </div>
 
       <div className="space-y-4">
