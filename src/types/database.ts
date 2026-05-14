@@ -13,16 +13,19 @@ export interface Database {
         Row: {
           id: string
           display_name: string | null
+          hall_of_fame: string[] | null
           created_at: string
         }
         Insert: {
           id: string
           display_name?: string | null
+          hall_of_fame?: string[] | null
           created_at?: string
         }
         Update: {
           id?: string
           display_name?: string | null
+          hall_of_fame?: string[] | null
           created_at?: string
         }
       }
@@ -252,6 +255,7 @@ export interface Database {
           user_id: string
           name: string
           notes: string | null
+          template_order: number
           created_at: string
         }
         Insert: {
@@ -259,6 +263,7 @@ export interface Database {
           user_id: string
           name: string
           notes?: string | null
+          template_order?: number
           created_at?: string
         }
         Update: {
@@ -266,6 +271,7 @@ export interface Database {
           user_id?: string
           name?: string
           notes?: string | null
+          template_order?: number
           created_at?: string
         }
       }

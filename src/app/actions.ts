@@ -99,3 +99,23 @@ export async function deleteWorkout(sessionId: string) {
   revalidatePath("/progress")
   revalidatePath("/")
 }
+
+export async function updateHallOfFame(exerciseIds: string[]) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Not authenticated")
+
+  // Ensure maximum 3 ids
+  const idsToSave = exerciseIds.slice(0, 3)
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ hall_of_fame: idsToSave })
+    .eq("id", user.id)
+
+  if (error) {
+    throw new Error("Failed to update Hall of Fame")
+  }
+
+  revalidatePath("/")
+}

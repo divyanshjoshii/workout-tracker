@@ -238,3 +238,21 @@ export async function getExerciseHistory(exerciseId: string) {
   }
 }
 
+export async function updateTemplateOrder(updates: { id: string, template_order: number }[]) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Not authenticated")
+
+  // Update order for each template
+  for (const update of updates) {
+    await supabase
+      .from("workout_templates")
+      .update({ template_order: update.template_order })
+      .eq("id", update.id)
+      .eq("user_id", user.id)
+  }
+
+  revalidatePath("/workout")
+  revalidatePath("/")
+}
+

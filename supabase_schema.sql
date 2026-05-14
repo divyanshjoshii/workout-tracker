@@ -2,6 +2,7 @@
 CREATE TABLE public.profiles (
   id uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL PRIMARY KEY,
   display_name text,
+  hall_of_fame uuid[] DEFAULT '{}'::uuid[],
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -95,6 +96,7 @@ CREATE TABLE public.workout_templates (
   user_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   name text NOT NULL,
   notes text,
+  template_order integer DEFAULT 0 NOT NULL,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

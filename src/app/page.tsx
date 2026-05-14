@@ -6,7 +6,8 @@ import { Dumbbell, LogOut, Settings, Trophy, ChevronRight, Play } from "lucide-r
 import Link from "next/link"
 import { BodyWeightWidget } from "@/components/dashboard/body-weight-widget"
 import { LogPastWorkout } from "@/components/dashboard/log-past-workout"
-import { startWorkout } from "@/app/workout/actions"
+import { startWorkout, startWorkoutFromTemplate } from "@/app/workout/actions"
+import { HallOfFameEditor } from "@/components/dashboard/hall-of-fame-editor"
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -17,10 +18,10 @@ export default async function DashboardPage() {
     redirect("/login")
   }
 
-  // 1. Fetch Profile Name
+  // 1. Fetch Profile
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name")
+    .select("display_name, hall_of_fame")
     .eq("id", user.id)
     .single()
 
@@ -56,68 +57,71 @@ export default async function DashboardPage() {
     .single()
 
   // 5. Smart Next Workout Suggestion
-  let nextSplitDay: any = null
-  const { data: activeSplit } = await supabase
-    .from("splits")
+  let nextTemplate: any = null
+  const { data: templates } = await supabase
+    .from("workout_templates")
     .select("id, name")
     .eq("user_id", user.id)
-    .eq("is_active", true)
-    .single()
+    .order("template_order", { ascending: true })
 
-  if (activeSplit) {
-    const { data: splitDays } = await supabase
-      .from("split_days")
-      .select("*")
-      .eq("split_id", activeSplit.id)
-      .order("day_order", { ascending: true })
-
-    if (splitDays && splitDays.length > 0) {
-      if (lastWorkout && lastWorkout.split_day_id) {
-        // Find what was completed last
-        const lastIndex = splitDays.findIndex(d => d.id === lastWorkout.split_day_id)
-        if (lastIndex !== -1) {
-          nextSplitDay = splitDays[(lastIndex + 1) % splitDays.length]
-        } else {
-          nextSplitDay = splitDays[0] // Fallback
-        }
+  if (templates && templates.length > 0) {
+    if (lastWorkout && lastWorkout.name) {
+      // Find what was completed last by matching names
+      const lastIndex = templates.findIndex(t => t.name.toLowerCase() === lastWorkout.name.toLowerCase())
+      if (lastIndex !== -1) {
+        nextTemplate = templates[(lastIndex + 1) % templates.length]
       } else {
-        nextSplitDay = splitDays[0] // Start from beginning if no history
+        nextTemplate = templates[0] // Fallback
       }
+    } else {
+      nextTemplate = templates[0] // Start from beginning if no history
     }
   }
 
-  // 6. Hall of Fame (Top PRs for Favorites)
+  // 6. Hall of Fame (Top PRs for custom selection)
   let hallOfFame: any[] = []
-  const { data: favorites } = await supabase
-    .from("favorite_exercises")
-    .select("exercise_id, exercises(name)")
-    .eq("user_id", user.id)
-    .limit(3)
-
-  if (favorites && favorites.length > 0) {
-    for (const fav of favorites) {
-      // Find PR for this exercise
-      const { data: weData } = await supabase
-        .from("workout_exercises")
-        .select("id")
-        .eq("exercise_id", fav.exercise_id)
+  const hofIds = profile?.hall_of_fame || []
+  
+  if (hofIds.length > 0) {
+    const { data: exercises } = await supabase
+      .from("exercises")
+      .select("id, name")
+      .in("id", hofIds)
       
-      if (weData && weData.length > 0) {
-        const weIds = weData.map(w => w.id)
-        const { data: prData } = await supabase
-          .from("workout_sets")
-          .select("weight, reps")
-          .in("workout_exercise_id", weIds)
-          .not("weight", "is", null)
-          .order("weight", { ascending: false })
-          .limit(1)
+    if (exercises && exercises.length > 0) {
+      for (const ex of exercises) {
+        const { data: weData } = await supabase
+          .from("workout_exercises")
+          .select("id")
+          .eq("exercise_id", ex.id)
         
-        if (prData && prData.length > 0) {
-          hallOfFame.push({ name: (fav.exercises as any).name, pr: prData[0] })
+        let pr = { weight: 0, reps: 0 }
+        
+        if (weData && weData.length > 0) {
+          const weIds = weData.map(w => w.id)
+          const { data: prData } = await supabase
+            .from("workout_sets")
+            .select("weight, reps")
+            .in("workout_exercise_id", weIds)
+            .not("weight", "is", null)
+            .order("weight", { ascending: false })
+            .limit(1)
+          
+          if (prData && prData.length > 0) {
+            pr = prData[0]
+          }
         }
+        
+        hallOfFame.push({ id: ex.id, name: ex.name, pr: pr })
       }
     }
   }
+
+  // Fetch all exercises for the editor
+  const { data: allExercises } = await supabase
+    .from("exercises")
+    .select("id, name, muscle_group")
+    .order("name", { ascending: true })
 
   return (
     <div className="flex flex-col p-4 space-y-6 max-w-lg mx-auto pb-24">
@@ -136,37 +140,48 @@ export default async function DashboardPage() {
       </header>
 
       {/* Hall of Fame */}
-      {hallOfFame.length > 0 && (
-        <Card className="border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-transparent">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-3">
+      <Card className="border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-transparent">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
               <Trophy className="w-5 h-5 text-yellow-500" />
               <h2 className="font-bold text-sm text-yellow-600 dark:text-yellow-500 uppercase tracking-wider">Hall of Fame</h2>
             </div>
-            <div className="space-y-2">
-              {hallOfFame.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center bg-background/50 rounded-md p-2 px-3">
+            <HallOfFameEditor allExercises={allExercises || []} currentSelections={hofIds} />
+          </div>
+          <div className="space-y-2">
+            {hallOfFame.length > 0 ? hallOfFame.map((item, idx) => (
+              <div key={idx} className="flex justify-between items-center bg-background/50 rounded-md p-2 px-3">
                   <span className="font-medium text-sm truncate pr-2">{item.name}</span>
-                  <span className="font-mono font-bold text-primary shrink-0">{item.pr.weight}kg <span className="text-muted-foreground font-sans text-xs font-normal">x{item.pr.reps}</span></span>
+                  <span className="font-mono font-bold text-primary shrink-0">
+                    {item.pr.weight > 0 ? (
+                      <>{item.pr.weight}kg <span className="text-muted-foreground font-sans text-xs font-normal">x{item.pr.reps}</span></>
+                    ) : (
+                      <span className="text-muted-foreground font-sans text-xs font-normal">-</span>
+                    )}
+                  </span>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            )) : (
+              <div className="text-sm text-yellow-700/70 dark:text-yellow-500/70 py-2 text-center">
+                Click the edit icon to pick your top 3 exercises!
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Main Call to Action */}
       <div className="space-y-4">
-        {nextSplitDay && (
+        {nextTemplate && (
           <div className="space-y-2">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Suggested</h2>
-            <form action={startWorkout.bind(null, nextSplitDay.id)} className="block">
+            <form action={startWorkoutFromTemplate.bind(null, nextTemplate.id)} className="block">
               <Button type="submit" className="w-full h-16 text-lg font-bold shadow-md bg-primary hover:bg-primary/90 text-primary-foreground flex flex-col items-center justify-center relative overflow-hidden group">
                 <div className="absolute inset-0 bg-white/20 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                 <span className="flex items-center text-sm font-medium opacity-90 uppercase tracking-widest mb-0.5">
                   <Play className="w-3.5 h-3.5 mr-1" fill="currentColor" /> Up Next
                 </span>
-                <span>{nextSplitDay.name}</span>
+                <span>{nextTemplate.name}</span>
               </Button>
             </form>
           </div>

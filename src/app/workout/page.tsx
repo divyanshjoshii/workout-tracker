@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Dumbbell, Plus, Copy } from "lucide-react"
 import Link from "next/link"
-import { startWorkout, startWorkoutFromTemplate } from "./actions"
+import { startWorkout } from "./actions"
 import { ClientDateInput } from "./client-date-input"
+import { TemplateList } from "@/components/workout/template-list"
 
 export default async function WorkoutStartPage() {
   const supabase = await createClient()
@@ -32,7 +33,7 @@ export default async function WorkoutStartPage() {
     .from("workout_templates")
     .select("*")
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
+    .order("template_order", { ascending: true })
 
   // We need an array of split_days sorted by order
   const splitDays = activeSplit?.split_days?.sort((a: any, b: any) => a.day_order - b.day_order) || []
@@ -82,36 +83,7 @@ export default async function WorkoutStartPage() {
       )}
 
       {templates && templates.length > 0 && (
-        <>
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Your Templates</span>
-            </div>
-          </div>
-
-          <Card className="border-border bg-card shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-primary flex items-center">
-                <Copy className="mr-2 h-5 w-5" />
-                Saved Templates
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {templates.map((template: any) => (
-                <form key={template.id} action={startWorkoutFromTemplate.bind(null, template.id)}>
-                  <ClientDateInput />
-                  <Button type="submit" variant="outline" className="w-full justify-between h-14 text-lg font-medium border-border hover:bg-primary hover:text-primary-foreground hover:border-primary">
-                    <span>{template.name}</span>
-                    <Plus className="h-5 w-5 opacity-50" />
-                  </Button>
-                </form>
-              ))}
-            </CardContent>
-          </Card>
-        </>
+        <TemplateList initialTemplates={templates} />
       )}
 
       <div className="relative mt-8">
