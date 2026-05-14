@@ -144,7 +144,7 @@ export async function startWorkoutFromTemplate(templateId: string, formData?: Fo
     .from("workout_sessions")
     .insert({
       user_id: user.id,
-      name: template.name,
+      name: template.name.replace(/\s*template$/i, ""),
       date: formData?.get('localDate') as string || new Date().toISOString().split('T')[0]
     })
     .select()
@@ -189,3 +189,52 @@ export async function startWorkoutFromTemplate(templateId: string, formData?: Fo
   revalidatePath("/workout")
   redirect(`/workout/${session.id}`)
 }
+
+export async function getExerciseHistory(exerciseId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { pr: null, lastSession: null }
+
+  // 1. Get all workout_exercises for this user and exercise
+  const { data: weData } = await supabase
+    .from("workout_exercises")
+    .select(`
+      id,
+      workout_sessions!inner(user_id, created_at)
+    `)
+    .eq("exercise_id", exerciseId)
+    .eq("workout_sessions.user_id", user.id)
+
+  if (!weData || weData.length === 0) return { pr: null, lastSession: null }
+
+  const weIds = weData.map(w => w.id)
+
+  // 2. Get PR (max weight)
+  const { data: prData } = await supabase
+    .from("workout_sets")
+    .select("weight, reps")
+    .in("workout_exercise_id", weIds)
+    .not("weight", "is", null)
+    .order("weight", { ascending: false })
+    .limit(1)
+
+  // 3. Get last session data
+  const sortedWe = [...weData].sort((a, b) => {
+    const tA = new Date((a as any).workout_sessions.created_at).getTime()
+    const tB = new Date((b as any).workout_sessions.created_at).getTime()
+    return tB - tA
+  })
+  
+  const lastWeId = sortedWe[0].id
+  const { data: lastSessionSets } = await supabase
+    .from("workout_sets")
+    .select("weight, reps, set_number")
+    .eq("workout_exercise_id", lastWeId)
+    .order("set_number", { ascending: true })
+
+  return {
+    pr: prData && prData.length > 0 ? prData[0] : null,
+    lastSession: lastSessionSets || []
+  }
+}
+

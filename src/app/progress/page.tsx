@@ -27,6 +27,20 @@ export default async function ProgressPage() {
     .order("date", { ascending: false })
     .limit(30) // last 30 entries
 
+  // Fetch exercises performed this week
+  const oneWeekAgo = new Date()
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+  const { data: weeklyExercises } = await supabase
+    .from("workout_exercises")
+    .select(`
+      id,
+      exercise_id,
+      exercises (id, name, muscle_group, category, image_url),
+      workout_sessions!inner (id, name, split_day_id, created_at, user_id)
+    `)
+    .eq("workout_sessions.user_id", user.id)
+    .gte("workout_sessions.created_at", oneWeekAgo.toISOString())
+
   return (
     <div className="flex flex-col p-4 space-y-6 max-w-lg mx-auto pb-24">
       <header className="flex items-center justify-between mt-4">
@@ -39,6 +53,7 @@ export default async function ProgressPage() {
       <ProgressClient 
         sessions={sessions || []} 
         weightEntries={weightEntries || []} 
+        weeklyExercises={weeklyExercises || []}
       />
     </div>
   )

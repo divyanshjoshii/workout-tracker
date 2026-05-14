@@ -4,6 +4,7 @@ import { ArrowLeft, Dumbbell, Activity, Target } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { FavoriteButton } from "@/components/exercises/favorite-button"
+import { ExerciseProgressCharts } from "@/components/exercises/exercise-progress-charts"
 
 export default async function ExerciseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -82,6 +83,8 @@ export default async function ExerciseDetailPage({ params }: { params: Promise<{
             {exercise.instructions || "No instructions provided for this exercise."}
           </p>
         </div>
+        
+        <ExerciseProgressCharts exerciseId={exercise.id} userId={user.id} />
         
         <div className="pt-6">
           <Button className="w-full h-12 text-base font-semibold shadow-md">

@@ -73,6 +73,9 @@ CREATE TABLE public.workout_sets (
   weight numeric,
   reps integer NOT NULL,
   rpe numeric,
+  set_type text DEFAULT 'normal',
+  notes text,
+  is_bodyweight boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

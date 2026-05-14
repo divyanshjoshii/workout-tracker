@@ -7,8 +7,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Check, Plus, Trash2, Timer, Play, X } from "lucide-react"
+import { Check, Plus, Timer, X, ChevronLeft } from "lucide-react"
 import { finishWorkout } from "@/app/workout/actions"
+import { useRouter } from "next/navigation"
+
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { restrictToVerticalAxis, restrictToWindowEdges } from '@dnd-kit/modifiers'
+
+import { SortableExercise } from "./sortable-exercise"
 
 type Exercise = Database["public"]["Tables"]["exercises"]["Row"]
 type Session = Database["public"]["Tables"]["workout_sessions"]["Row"]
@@ -33,7 +40,6 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
   const [isPending, startTransition] = useTransition()
   const [feeling, setFeeling] = useState<"Easy" | "Medium" | "Hard">("Medium")
   
-  // Local state for completed sets (just UI feedback)
   const [completedSets, setCompletedSets] = useState<Record<string, boolean>>({})
 
   // Rest Timer State
@@ -44,6 +50,12 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
   const supabase = createClient()
+  const router = useRouter()
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { delay: 100, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
 
   // --- Timer Logic ---
   useEffect(() => {
@@ -62,7 +74,6 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
         } else {
           setRestTimeLeft(0)
           setRestTargetEndTime(null)
-          // Optional: Vibrate when rest is over
           if (typeof window !== "undefined" && window.navigator && window.navigator.vibrate) {
             window.navigator.vibrate([200, 100, 200])
           }
@@ -70,9 +81,7 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
       }
     }, 1000)
 
-    // Initial call
     setElapsedSeconds(Math.floor((Date.now() - sessionStart) / 1000))
-
     return () => clearInterval(interval)
   }, [restTargetEndTime, session.created_at])
 
@@ -90,8 +99,7 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
     setCompletedSets(prev => {
       const isNowComplete = !prev[setId]
       if (isNowComplete) {
-        // Auto-start a 90s rest timer when completing a set
-        startRestTimer(90)
+        startRestTimer(150) // 2m 30s
       }
       return { ...prev, [setId]: isNowComplete }
     })
@@ -116,6 +124,35 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
     }
   }
 
+  async function removeExercise(weId: string) {
+    setWorkoutExercises(prev => prev.filter(we => we.id !== weId))
+    await supabase.from("workout_exercises").delete().eq("id", weId)
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      setWorkoutExercises((items) => {
+        const oldIndex = items.findIndex((i) => i.id === active.id)
+        const newIndex = items.findIndex((i) => i.id === over.id)
+        const newItems = arrayMove(items, oldIndex, newIndex)
+        
+        // Update DB
+        const updates = newItems.map((item, index) => ({
+          id: item.id,
+          exercise_order: index + 1
+        }))
+        
+        // Fire and forget updates
+        updates.forEach(async (update) => {
+          await supabase.from("workout_exercises").update({ exercise_order: update.exercise_order }).eq("id", update.id)
+        })
+
+        return newItems
+      })
+    }
+  }
+
   async function addSet(workoutExerciseId: string) {
     const targetWe = workoutExercises.find(we => we.id === workoutExerciseId)
     if (!targetWe) return
@@ -123,7 +160,6 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
     const setNumber = targetWe.workout_sets.length + 1
     const prevSet = targetWe.workout_sets[targetWe.workout_sets.length - 1]
     const weight = prevSet ? prevSet.weight : null
-    const reps = prevSet ? prevSet.reps : null // Default to null for clean UI, or use prev
 
     const { data: newSet, error } = await supabase
       .from("workout_sets")
@@ -131,7 +167,7 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
         workout_exercise_id: workoutExerciseId,
         set_number: setNumber,
         weight,
-        reps: reps || 0,
+        reps: 0,
       })
       .select()
       .single()
@@ -146,8 +182,11 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
     }
   }
 
-  async function updateSet(workoutExerciseId: string, setId: string, field: "weight" | "reps", value: string) {
-    const numValue = value === "" ? null : Number(value)
+  async function updateSet(workoutExerciseId: string, setId: string, field: string, value: any) {
+    let numValue = value
+    if (field === "weight" || field === "reps") {
+      numValue = value === "" ? null : Number(value)
+    }
     
     setWorkoutExercises(prev => prev.map(we => {
       if (we.id === workoutExerciseId) {
@@ -175,7 +214,6 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
       }
       return we
     }))
-
     await supabase.from("workout_sets").delete().eq("id", setId)
   }
 
@@ -205,11 +243,16 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
   return (
     <div className="flex flex-col p-4 space-y-6 max-w-lg mx-auto pb-32">
       <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{session.name}</h1>
-          <div className="flex items-center text-sm font-mono text-primary mt-1 bg-primary/10 px-2 py-0.5 rounded-full w-fit">
-            <Timer className="w-3.5 h-3.5 mr-1.5" />
-            <span>{formatTime(elapsedSeconds)}</span>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={() => router.push("/")} className="shrink-0 -ml-2 text-muted-foreground hover:text-foreground">
+            <ChevronLeft className="w-6 h-6" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{session.name}</h1>
+            <div className="flex items-center text-sm font-mono text-primary mt-1 bg-primary/10 px-2 py-0.5 rounded-full w-fit">
+              <Timer className="w-3.5 h-3.5 mr-1.5" />
+              <span>{formatTime(elapsedSeconds)}</span>
+            </div>
           </div>
         </div>
         <Button onClick={handleFinish} disabled={isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
@@ -218,77 +261,30 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
       </header>
 
       <div className="space-y-6">
-        {workoutExercises.map((we) => (
-          <Card key={we.id} className="border-border bg-card">
-            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-lg text-primary flex items-center">
-                {we.exercises.name}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="grid grid-cols-[3rem_1fr_1fr_3rem_3rem] gap-2 text-xs font-semibold text-muted-foreground uppercase text-center mb-2">
-                  <span>Set</span>
-                  <span>kg</span>
-                  <span>Reps</span>
-                  <span>Done</span>
-                  <span></span>
-                </div>
-                
-                {we.workout_sets
-                  .sort((a, b) => a.set_number - b.set_number)
-                  .map((set, idx) => {
-                    const isCompleted = completedSets[set.id]
-                    return (
-                    <div key={set.id} className={`grid grid-cols-[3rem_1fr_1fr_3rem_3rem] gap-2 items-center transition-colors rounded-md p-1 ${isCompleted ? 'bg-primary/10' : ''}`}>
-                      <div className="text-center font-medium bg-secondary/20 text-secondary rounded-md h-9 flex items-center justify-center">
-                        {idx + 1}
-                      </div>
-                      <Input
-                        type="number"
-                        placeholder="--"
-                        value={set.weight ?? ""}
-                        onChange={(e) => updateSet(we.id, set.id, "weight", e.target.value)}
-                        className={`h-9 text-center bg-background border-border ${isCompleted ? 'opacity-70 text-primary border-primary/50' : ''}`}
-                      />
-                      <Input
-                        type="number"
-                        placeholder="--"
-                        value={set.reps || ""}
-                        onChange={(e) => updateSet(we.id, set.id, "reps", e.target.value)}
-                        className={`h-9 text-center bg-background border-border ${isCompleted ? 'opacity-70 text-primary border-primary/50' : ''}`}
-                      />
-                      <Button
-                        variant={isCompleted ? "default" : "secondary"}
-                        size="icon"
-                        className={`h-9 w-full ${isCompleted ? 'bg-primary text-primary-foreground' : ''}`}
-                        onClick={() => toggleSetComplete(set.id)}
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => removeSet(we.id, set.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )})}
-                
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full mt-2 border-border border-dashed text-muted-foreground hover:text-foreground"
-                  onClick={() => addSet(we.id)}
-                >
-                  <Plus className="h-4 w-4 mr-2" /> Add Set
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        <DndContext 
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+          modifiers={[restrictToVerticalAxis, restrictToWindowEdges]}
+        >
+          <SortableContext 
+            items={workoutExercises.map(we => we.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {workoutExercises.map((we) => (
+              <SortableExercise 
+                key={we.id} 
+                we={we} 
+                completedSets={completedSets}
+                toggleSetComplete={toggleSetComplete}
+                updateSet={updateSet}
+                removeSet={removeSet}
+                addSet={addSet}
+                removeExercise={removeExercise}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
       </div>
 
       <Dialog open={isAddExerciseOpen} onOpenChange={setIsAddExerciseOpen}>
@@ -351,9 +347,6 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
                   <Plus className="h-4 w-4 text-muted-foreground shrink-0" />
                 </button>
               ))}
-              {filteredExercises.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">No exercises found.</div>
-              )}
             </div>
           </div>
         </DialogContent>

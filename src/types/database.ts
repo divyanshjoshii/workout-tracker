@@ -190,6 +190,9 @@ export interface Database {
           weight: number | null
           reps: number
           rpe: number | null
+          set_type: string | null
+          notes: string | null
+          is_bodyweight: boolean | null
           created_at: string
         }
         Insert: {
@@ -199,6 +202,9 @@ export interface Database {
           weight?: number | null
           reps: number
           rpe?: number | null
+          set_type?: string | null
+          notes?: string | null
+          is_bodyweight?: boolean | null
           created_at?: string
         }
         Update: {
@@ -208,6 +214,9 @@ export interface Database {
           weight?: number | null
           reps?: number
           rpe?: number | null
+          set_type?: string | null
+          notes?: string | null
+          is_bodyweight?: boolean | null
           created_at?: string
         }
       }
