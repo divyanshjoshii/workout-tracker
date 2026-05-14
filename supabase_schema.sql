@@ -41,6 +41,8 @@ CREATE TABLE public.split_days (
   split_id uuid REFERENCES public.splits(id) ON DELETE CASCADE NOT NULL,
   name text NOT NULL,
   day_order integer NOT NULL,
+  target_muscles text[],
+  default_template_id uuid REFERENCES public.workout_templates(id) ON DELETE SET NULL,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

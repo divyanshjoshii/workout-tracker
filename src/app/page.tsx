@@ -89,17 +89,16 @@ export default async function DashboardPage() {
     }
   }
 
-  // If we have a suggested split day, check if they made a template with the same name!
-  if (nextSplitDay) {
+  // If the suggested split day has a linked template, fetch it!
+  if (nextSplitDay && nextSplitDay.default_template_id) {
     const { data: templateMatch } = await supabase
       .from("workout_templates")
       .select("id, name")
-      .eq("user_id", user.id)
-      .ilike("name", nextSplitDay.name)
-      .limit(1)
+      .eq("id", nextSplitDay.default_template_id)
+      .single()
 
-    if (templateMatch && templateMatch.length > 0) {
-      matchingTemplate = templateMatch[0]
+    if (templateMatch) {
+      matchingTemplate = templateMatch
     }
   }
 

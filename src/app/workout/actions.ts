@@ -190,22 +190,28 @@ export async function startWorkoutFromTemplate(templateId: string, formData?: Fo
   redirect(`/workout/${session.id}`)
 }
 
-export async function getExerciseHistory(exerciseId: string) {
+export async function getExerciseHistory(exerciseId: string, currentSessionId?: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { pr: null, lastSession: null }
 
   // 1. Get all workout_exercises for this user and exercise
-  const { data: weData } = await supabase
+  const { data: weDataRaw } = await supabase
     .from("workout_exercises")
     .select(`
       id,
+      session_id,
       workout_sessions!inner(user_id, created_at)
     `)
     .eq("exercise_id", exerciseId)
     .eq("workout_sessions.user_id", user.id)
 
-  if (!weData || weData.length === 0) return { pr: null, lastSession: null }
+  if (!weDataRaw || weDataRaw.length === 0) return { pr: null, lastSession: null }
+  
+  // Filter out the current session if provided
+  const weData = currentSessionId ? weDataRaw.filter(we => we.session_id !== currentSessionId) : weDataRaw;
+
+  if (weData.length === 0) return { pr: null, lastSession: null }
 
   const weIds = weData.map(w => w.id)
 

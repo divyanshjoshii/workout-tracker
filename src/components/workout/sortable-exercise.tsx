@@ -46,7 +46,7 @@ export function SortableExercise({
   useEffect(() => {
     // Fetch PR and last session data for this exercise
     async function fetchHistory() {
-      const history = await getExerciseHistory(we.exercises.id)
+      const history = await getExerciseHistory(we.exercises.id, we.session_id)
       if (history.pr) setPr(history.pr as any)
       if (history.lastSession) setLastSessionSets(history.lastSession)
     }

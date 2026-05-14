@@ -24,6 +24,13 @@ export default async function SplitsPage() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
 
+  // Fetch all templates to allow linking
+  const { data: templates } = await supabase
+    .from("workout_templates")
+    .select("id, name")
+    .eq("user_id", user.id)
+    .order("template_order", { ascending: true })
+
   return (
     <div className="flex flex-col p-4 space-y-6 max-w-lg mx-auto pb-24">
       <header className="flex items-center justify-between mt-4">
@@ -51,7 +58,7 @@ export default async function SplitsPage() {
       ) : (
         <div className="grid gap-4">
           {splits.map((split: any) => (
-            <SplitCard key={split.id} split={split} />
+            <SplitCard key={split.id} split={split} templates={templates || []} />
           ))}
         </div>
       )}

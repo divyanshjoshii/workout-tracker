@@ -7,8 +7,11 @@ import { Badge } from "@/components/ui/badge"
 import { Database } from "@/types/database"
 import { setActiveSplit, deleteSplit } from "@/app/splits/actions"
 import { useTransition } from "react"
-import { CheckCircle2, Trash2, GripVertical } from "lucide-react"
+import { CheckCircle2, Trash2, GripVertical, Link as LinkIcon, Settings2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { updateSplitDayTemplate } from "@/app/splits/actions"
 
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
 import { arrayMove, SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
@@ -19,27 +22,72 @@ type SplitDay = Database["public"]["Tables"]["split_days"]["Row"]
 
 interface SplitCardProps {
   split: Split & { split_days: SplitDay[] }
+  templates: { id: string, name: string }[]
 }
 
-function SortableSplitDayBadge({ day }: { day: SplitDay }) {
+function SortableSplitDayBadge({ day, templates }: { day: SplitDay, templates: { id: string, name: string }[] }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: day.id })
+  const [open, setOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 10 : 1,
   }
 
+  async function handleLinkTemplate(templateId: string | null) {
+    startTransition(async () => {
+      await updateSplitDayTemplate(day.id, templateId === "none" || templateId === null ? null : templateId)
+    })
+  }
+
+  const linkedTemplate = templates.find(t => t.id === day.default_template_id)
+
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-1 group bg-background border border-border rounded-full px-2.5 py-0.5 text-xs font-semibold text-foreground">
-      <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none p-0.5 -ml-1">
-        <GripVertical className="h-3 w-3" />
-      </div>
-      {day.name}
-    </div>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={<div ref={setNodeRef} style={style} className="flex items-center gap-1.5 group bg-background hover:bg-accent cursor-pointer border border-border rounded-full px-3 py-1 text-xs font-semibold text-foreground transition-colors" />}>
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none p-0.5 -ml-1.5" onClick={(e) => e.stopPropagation()}>
+          <GripVertical className="h-3 w-3" />
+        </div>
+        <span>{day.name}</span>
+        {linkedTemplate && <LinkIcon className="h-3 w-3 text-primary ml-0.5" />}
+        <Settings2 className="h-3 w-3 text-muted-foreground opacity-50 group-hover:opacity-100 ml-1" />
+      </DialogTrigger>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Configure Split Day</DialogTitle>
+          <DialogDescription>
+            {day.name}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4 space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Linked Template</label>
+            <p className="text-xs text-muted-foreground">Select a template to automatically load when this split day is Up Next.</p>
+            <Select 
+              value={day.default_template_id || "none"} 
+              onValueChange={handleLinkTemplate}
+              disabled={isPending}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a template" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None (Blank Workout)</SelectItem>
+                {templates.map(t => (
+                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
-export function SplitCard({ split }: SplitCardProps) {
+export function SplitCard({ split, templates }: SplitCardProps) {
   const [isPending, startTransition] = useTransition()
   const [days, setDays] = useState(split.split_days.sort((a, b) => a.day_order - b.day_order))
   const supabase = createClient()
@@ -118,7 +166,7 @@ export function SplitCard({ split }: SplitCardProps) {
           >
             <SortableContext items={days.map(d => d.id)} strategy={horizontalListSortingStrategy}>
               {days.map((day) => (
-                <SortableSplitDayBadge key={day.id} day={day} />
+                <SortableSplitDayBadge key={day.id} day={day} templates={templates} />
               ))}
             </SortableContext>
           </DndContext>

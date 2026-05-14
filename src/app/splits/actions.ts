@@ -100,3 +100,31 @@ export async function deleteSplit(splitId: string) {
   revalidatePath("/splits")
   revalidatePath("/workout")
 }
+
+export async function updateSplitDayTemplate(splitDayId: string, templateId: string | null) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error("Not authenticated")
+  }
+
+  // Ensure they own the split day
+  const { data: splitDay } = await supabase
+    .from("split_days")
+    .select("splits!inner(user_id)")
+    .eq("id", splitDayId)
+    .single()
+    
+  if (!splitDay || (splitDay.splits as any).user_id !== user.id) {
+    throw new Error("Unauthorized")
+  }
+
+  await supabase
+    .from("split_days")
+    .update({ default_template_id: templateId })
+    .eq("id", splitDayId)
+
+  revalidatePath("/splits")
+  revalidatePath("/")
+}
