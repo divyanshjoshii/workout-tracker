@@ -56,25 +56,50 @@ export default async function DashboardPage() {
     .limit(1)
     .single()
 
-  // 5. Smart Next Workout Suggestion
-  let nextTemplate: any = null
-  const { data: templates } = await supabase
-    .from("workout_templates")
+  // 5. Smart Next Workout Suggestion based on Split Schedule
+  let nextSplitDay: any = null
+  let matchingTemplate: any = null
+  
+  const { data: activeSplit } = await supabase
+    .from("splits")
     .select("id, name")
     .eq("user_id", user.id)
-    .order("template_order", { ascending: true })
+    .eq("is_active", true)
+    .single()
 
-  if (templates && templates.length > 0) {
-    if (lastWorkout && lastWorkout.name) {
-      // Find what was completed last by matching names
-      const lastIndex = templates.findIndex(t => t.name.toLowerCase() === lastWorkout.name.toLowerCase())
-      if (lastIndex !== -1) {
-        nextTemplate = templates[(lastIndex + 1) % templates.length]
+  if (activeSplit) {
+    const { data: splitDays } = await supabase
+      .from("split_days")
+      .select("*")
+      .eq("split_id", activeSplit.id)
+      .order("day_order", { ascending: true })
+
+    if (splitDays && splitDays.length > 0) {
+      if (lastWorkout && lastWorkout.split_day_id) {
+        // Find what was completed last
+        const lastIndex = splitDays.findIndex(d => d.id === lastWorkout.split_day_id)
+        if (lastIndex !== -1) {
+          nextSplitDay = splitDays[(lastIndex + 1) % splitDays.length]
+        } else {
+          nextSplitDay = splitDays[0] // Fallback
+        }
       } else {
-        nextTemplate = templates[0] // Fallback
+        nextSplitDay = splitDays[0] // Start from beginning if no history
       }
-    } else {
-      nextTemplate = templates[0] // Start from beginning if no history
+    }
+  }
+
+  // If we have a suggested split day, check if they made a template with the same name!
+  if (nextSplitDay) {
+    const { data: templateMatch } = await supabase
+      .from("workout_templates")
+      .select("id, name")
+      .eq("user_id", user.id)
+      .ilike("name", nextSplitDay.name)
+      .limit(1)
+
+    if (templateMatch && templateMatch.length > 0) {
+      matchingTemplate = templateMatch[0]
     }
   }
 
@@ -172,16 +197,16 @@ export default async function DashboardPage() {
 
       {/* Main Call to Action */}
       <div className="space-y-4">
-        {nextTemplate && (
+        {nextSplitDay && (
           <div className="space-y-2">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Suggested</h2>
-            <form action={startWorkoutFromTemplate.bind(null, nextTemplate.id)} className="block">
+            <form action={matchingTemplate ? startWorkoutFromTemplate.bind(null, matchingTemplate.id) : startWorkout.bind(null, nextSplitDay.id)} className="block">
               <Button type="submit" className="w-full h-16 text-lg font-bold shadow-md bg-primary hover:bg-primary/90 text-primary-foreground flex flex-col items-center justify-center relative overflow-hidden group">
                 <div className="absolute inset-0 bg-white/20 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                 <span className="flex items-center text-sm font-medium opacity-90 uppercase tracking-widest mb-0.5">
                   <Play className="w-3.5 h-3.5 mr-1" fill="currentColor" /> Up Next
                 </span>
-                <span>{nextTemplate.name}</span>
+                <span>{nextSplitDay.name} {matchingTemplate && "(Template)"}</span>
               </Button>
             </form>
           </div>
