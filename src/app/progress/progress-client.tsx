@@ -100,7 +100,7 @@ export function ProgressClient({ sessions, weightEntries, weeklyExercises }: Pro
           <div className="space-y-3">
             {sessions.length > 0 ? (
               sessions.map(session => (
-                <Link key={session.id} href={`/progress/session/${session.id}`} className="block">
+                <Link key={session.id} href={`/workout/${session.id}/edit`} className="block">
                   <Card className="border-border bg-card/50 hover:bg-card transition-colors cursor-pointer">
                     <CardContent className="p-4 flex items-center justify-between">
                       <div>

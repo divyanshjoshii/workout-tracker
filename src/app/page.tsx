@@ -204,7 +204,7 @@ export default async function DashboardPage() {
         <div className="space-y-2">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Last Workout</h2>
           {lastWorkout ? (
-            <Link href={`/progress/session/${lastWorkout.id}`} className="block group">
+            <Link href={`/workout/${lastWorkout.id}/edit`} className="block group">
               <Card className="border-border bg-card/50 hover:bg-accent/50 transition-colors cursor-pointer">
                 <CardContent className="p-4 flex items-center justify-between">
                   <div>
