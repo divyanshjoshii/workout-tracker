@@ -65,6 +65,7 @@ CREATE TABLE public.workout_exercises (
   session_id uuid REFERENCES public.workout_sessions(id) ON DELETE CASCADE NOT NULL,
   exercise_id uuid REFERENCES public.exercises(id) ON DELETE CASCADE NOT NULL,
   exercise_order integer NOT NULL,
+  superset_id uuid DEFAULT NULL,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -108,7 +109,9 @@ CREATE TABLE public.template_exercises (
   template_id uuid REFERENCES public.workout_templates(id) ON DELETE CASCADE NOT NULL,
   exercise_id uuid REFERENCES public.exercises(id) ON DELETE CASCADE NOT NULL,
   exercise_order integer NOT NULL,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+  superset_id uuid DEFAULT NULL,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  target_sets integer
 );
 
 -- Enable RLS

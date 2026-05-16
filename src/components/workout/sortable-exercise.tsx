@@ -26,10 +26,15 @@ interface SortableExerciseProps {
   removeSet: (weId: string, setId: string) => void
   addSet: (weId: string, parentSetNumber?: number) => void
   removeExercise: (weId: string) => void
+  isLinkedToNext?: boolean
+  isLinkedToPrev?: boolean
+  hasNext?: boolean
+  onToggleLink?: () => void
 }
 
 export function SortableExercise({ 
-  we, completedSets, toggleSetComplete, updateSet, removeSet, addSet, removeExercise 
+  we, completedSets, toggleSetComplete, updateSet, removeSet, addSet, removeExercise,
+  isLinkedToNext, isLinkedToPrev, hasNext, onToggleLink
 }: SortableExerciseProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: we.id })
   
@@ -54,14 +59,36 @@ export function SortableExercise({
   }, [we.exercises.id])
 
   return (
-    <Card ref={setNodeRef} style={style} className={`border-border bg-card ${isDragging ? 'shadow-xl ring-2 ring-primary/50 opacity-90' : ''}`}>
+    <Card 
+      ref={setNodeRef} 
+      style={style} 
+      className={`bg-card 
+        ${isDragging ? 'shadow-xl ring-2 ring-primary/50 opacity-90' : ''}
+        ${isLinkedToNext ? 'rounded-b-none border-b-0' : 'border-border border'}
+        ${isLinkedToPrev ? 'rounded-t-none border-t-0' : 'border-border border'}
+        ${isLinkedToNext || isLinkedToPrev ? 'border-primary/30 border-l-4' : ''}
+      `}
+    >
+      {isLinkedToPrev && <div className="h-px bg-border/50 mx-4 mt-2"></div>}
       <CardHeader className="pb-2 flex flex-row items-center space-y-0 p-3 sm:p-6">
         <div {...attributes} {...listeners} className="mr-2 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none">
           <GripVertical className="h-5 w-5" />
         </div>
         <div className="flex-1">
           <CardTitle className="text-lg text-primary flex items-center justify-between">
-            <span>{we.exercises.name}</span>
+            <div className="flex items-center gap-2">
+              <span>{we.exercises.name}</span>
+              {hasNext && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className={`h-6 text-[10px] px-2 rounded-full border ${isLinkedToNext ? 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/20' : 'text-muted-foreground border-border hover:text-foreground'}`}
+                  onClick={onToggleLink}
+                >
+                  {isLinkedToNext ? '🔗 Unlink' : '🔗 Link Next'}
+                </Button>
+              )}
+            </div>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => removeExercise(we.id)}>
               <Trash2 className="h-4 w-4" />
             </Button>

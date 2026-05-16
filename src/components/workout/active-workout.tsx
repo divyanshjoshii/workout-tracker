@@ -169,6 +169,13 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
       setWorkoutExercises((items) => {
         const oldIndex = items.findIndex((i) => i.id === active.id)
         const newIndex = items.findIndex((i) => i.id === over.id)
+        
+        const draggedItem = items[oldIndex]
+        if (draggedItem.superset_id) {
+           draggedItem.superset_id = null
+           supabase.from("workout_exercises").update({ superset_id: null }).eq("id", draggedItem.id).then()
+        }
+
         const newItems = arrayMove(items, oldIndex, newIndex)
         
         // Update DB
@@ -184,6 +191,45 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
 
         return newItems
       })
+    }
+  }
+
+  async function toggleSupersetLink(currentIndex: number) {
+    const currentWe = workoutExercises[currentIndex]
+    const nextWe = workoutExercises[currentIndex + 1]
+    if (!nextWe) return
+
+    const isLinked = currentWe.superset_id && currentWe.superset_id === nextWe.superset_id
+
+    if (isLinked) {
+      // Unlink nextWe
+      await supabase.from("workout_exercises").update({ superset_id: null }).eq("id", nextWe.id)
+      setWorkoutExercises(prev => prev.map((we, idx) => {
+        if (idx === currentIndex + 1) return { ...we, superset_id: null }
+        return we
+      }))
+
+      // If currentWe is no longer linked to anything, clear its superset_id
+      const otherLinked = workoutExercises.some((we, idx) => idx !== currentIndex && idx !== currentIndex + 1 && we.superset_id === currentWe.superset_id)
+      if (!otherLinked) {
+        await supabase.from("workout_exercises").update({ superset_id: null }).eq("id", currentWe.id)
+        setWorkoutExercises(prev => prev.map(we => we.id === currentWe.id ? { ...we, superset_id: null } : we))
+      }
+    } else {
+      // Link them together
+      let supersetId = currentWe.superset_id
+      if (!supersetId) {
+        supersetId = crypto.randomUUID()
+        await supabase.from("workout_exercises").update({ superset_id: supersetId }).eq("id", currentWe.id)
+      }
+      await supabase.from("workout_exercises").update({ superset_id: supersetId }).eq("id", nextWe.id)
+
+      setWorkoutExercises(prev => prev.map((we, idx) => {
+        if (we.id === currentWe.id || we.id === nextWe.id) {
+          return { ...we, superset_id: supersetId }
+        }
+        return we
+      }))
     }
   }
 
@@ -365,12 +411,17 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
             strategy={verticalListSortingStrategy}
           >
             {workoutExercises.map((we, index) => {
-              const isSuperset = we.workout_sets.length > 0 && we.workout_sets.some(s => s.set_type === "superset")
+              const isLinkedToNext = !!(we.superset_id && index < workoutExercises.length - 1 && workoutExercises[index + 1].superset_id === we.superset_id)
+              const isLinkedToPrev = !!(we.superset_id && index > 0 && workoutExercises[index - 1].superset_id === we.superset_id)
+              const hasNext = index < workoutExercises.length - 1
+              const isSupersetFirst = isLinkedToNext && !isLinkedToPrev
               
               return (
-              <div key={we.id} className="relative">
-                {isSuperset && index > 0 && (
-                  <div className="absolute -top-6 left-6 w-4 h-8 border-l-2 border-b-2 border-primary/40 rounded-bl-xl z-0 pointer-events-none"></div>
+              <div key={we.id} className="relative mt-2">
+                {isSupersetFirst && (
+                   <div className="absolute -top-3 left-4 bg-primary text-primary-foreground text-[10px] uppercase font-bold px-2 py-0.5 rounded-full z-20 shadow-sm">
+                     SUPERSET
+                   </div>
                 )}
                 <div className="relative z-10">
                   <SortableExercise 
@@ -381,6 +432,10 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
                     removeSet={removeSet}
                     addSet={addSet}
                     removeExercise={removeExercise}
+                    isLinkedToNext={isLinkedToNext}
+                    isLinkedToPrev={isLinkedToPrev}
+                    hasNext={hasNext}
+                    onToggleLink={() => toggleSupersetLink(index)}
                   />
                 </div>
               </div>

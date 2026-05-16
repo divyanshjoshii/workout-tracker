@@ -171,6 +171,7 @@ export interface Database {
           session_id: string
           exercise_id: string
           exercise_order: number
+          superset_id: string | null
           created_at: string
         }
         Insert: {
@@ -178,6 +179,7 @@ export interface Database {
           session_id: string
           exercise_id: string
           exercise_order: number
+          superset_id?: string | null
           created_at?: string
         }
         Update: {
@@ -185,6 +187,7 @@ export interface Database {
           session_id?: string
           exercise_id?: string
           exercise_order?: number
+          superset_id?: string | null
           created_at?: string
         }
       }
@@ -284,6 +287,7 @@ export interface Database {
           template_id: string
           exercise_id: string
           exercise_order: number
+          superset_id: string | null
           created_at: string
           target_sets: number | null
         }
@@ -292,6 +296,7 @@ export interface Database {
           template_id: string
           exercise_id: string
           exercise_order: number
+          superset_id?: string | null
           created_at?: string
           target_sets?: number | null
         }
@@ -300,6 +305,7 @@ export interface Database {
           template_id?: string
           exercise_id?: string
           exercise_order?: number
+          superset_id?: string | null
           created_at?: string
           target_sets?: number | null
         }

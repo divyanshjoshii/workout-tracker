@@ -127,6 +127,38 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises, ta
     await supabase.from("workout_sets").delete().eq("id", setId)
   }
 
+  async function toggleSupersetLink(currentIndex: number) {
+    const currentWe = workoutExercises[currentIndex]
+    const nextWe = workoutExercises[currentIndex + 1]
+    if (!nextWe) return
+
+    const isLinked = currentWe.superset_id && currentWe.superset_id === nextWe.superset_id
+
+    if (isLinked) {
+      await supabase.from("workout_exercises").update({ superset_id: null }).eq("id", nextWe.id)
+      setWorkoutExercises(prev => prev.map((we, idx) => idx === currentIndex + 1 ? { ...we, superset_id: null } : we))
+
+      const otherLinked = workoutExercises.some((we, idx) => idx !== currentIndex && idx !== currentIndex + 1 && we.superset_id === currentWe.superset_id)
+      if (!otherLinked) {
+        await supabase.from("workout_exercises").update({ superset_id: null }).eq("id", currentWe.id)
+        setWorkoutExercises(prev => prev.map(we => we.id === currentWe.id ? { ...we, superset_id: null } : we))
+      }
+    } else {
+      let supersetId = currentWe.superset_id || crypto.randomUUID()
+      if (!currentWe.superset_id) {
+        await supabase.from("workout_exercises").update({ superset_id: supersetId }).eq("id", currentWe.id)
+      }
+      await supabase.from("workout_exercises").update({ superset_id: supersetId }).eq("id", nextWe.id)
+
+      setWorkoutExercises(prev => prev.map((we, idx) => we.id === currentWe.id || we.id === nextWe.id ? { ...we, superset_id: supersetId } : we))
+    }
+  }
+
+  async function removeExercise(weId: string) {
+    setWorkoutExercises(prev => prev.filter(we => we.id !== weId))
+    await supabase.from("workout_exercises").delete().eq("id", weId)
+  }
+
   function handleDelete() {
     if (confirm("Are you sure you want to delete this workout? This action cannot be undone.")) {
       startTransition(async () => {
@@ -257,13 +289,47 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises, ta
       </Card>
 
       <div className="space-y-6">
-        {workoutExercises.map((we) => (
-          <Card key={we.id} className="border-border bg-card">
-            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-lg text-primary flex items-center">
-                {we.exercises.name}
-              </CardTitle>
-            </CardHeader>
+        {workoutExercises.map((we, index) => {
+          const isLinkedToNext = !!(we.superset_id && index < workoutExercises.length - 1 && workoutExercises[index + 1].superset_id === we.superset_id)
+          const isLinkedToPrev = !!(we.superset_id && index > 0 && workoutExercises[index - 1].superset_id === we.superset_id)
+          const hasNext = index < workoutExercises.length - 1
+          const isSupersetFirst = isLinkedToNext && !isLinkedToPrev
+
+          return (
+          <div key={we.id} className="relative mt-2">
+            {isSupersetFirst && (
+               <div className="absolute -top-3 left-4 bg-primary text-primary-foreground text-[10px] uppercase font-bold px-2 py-0.5 rounded-full z-20 shadow-sm">
+                 SUPERSET
+               </div>
+            )}
+            <Card 
+              className={`bg-card relative z-10
+                ${isLinkedToNext ? 'rounded-b-none border-b-0' : 'border-border border'}
+                ${isLinkedToPrev ? 'rounded-t-none border-t-0' : 'border-border border'}
+                ${isLinkedToNext || isLinkedToPrev ? 'border-primary/30 border-l-4' : ''}
+              `}
+            >
+              {isLinkedToPrev && <div className="h-px bg-border/50 mx-4 mt-2"></div>}
+              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-lg text-primary flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2">
+                    <span>{we.exercises.name}</span>
+                    {hasNext && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className={`h-6 text-[10px] px-2 rounded-full border ${isLinkedToNext ? 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/20' : 'text-muted-foreground border-border hover:text-foreground'}`}
+                        onClick={() => toggleSupersetLink(index)}
+                      >
+                        {isLinkedToNext ? '🔗 Unlink' : '🔗 Link Next'}
+                      </Button>
+                    )}
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => removeExercise(we.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </CardTitle>
+              </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div className="grid grid-cols-[3rem_1fr_1fr_3rem] gap-2 text-xs font-semibold text-muted-foreground uppercase text-center mb-2">
@@ -316,7 +382,8 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises, ta
               </div>
             </CardContent>
           </Card>
-        ))}
+          </div>
+        )})}
       </div>
 
       <Dialog open={isAddExerciseOpen} onOpenChange={setIsAddExerciseOpen}>
