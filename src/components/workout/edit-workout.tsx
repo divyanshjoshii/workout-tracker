@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
-import { Check, Plus, Trash2, Calendar, Clock, Save, Trash, Copy } from "lucide-react"
+import { Check, Plus, Trash2, Calendar, Clock, Save, Trash, Copy, Play } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { deleteWorkout } from "@/app/actions"
 import { saveAsTemplate } from "@/app/workout/actions"
@@ -212,6 +212,9 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises, ta
             </DialogContent>
           </Dialog>
 
+          <Button onClick={() => router.push(`/workout/${session.id}`)} variant="secondary" className="h-9 px-4 font-semibold">
+            <Play className="w-4 h-4 mr-2" /> Resume
+          </Button>
           <Button onClick={handleSave} disabled={isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-9 px-4">
             <Save className="w-4 h-4 mr-2" /> Save
           </Button>

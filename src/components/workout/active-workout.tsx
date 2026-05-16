@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Check, Plus, Timer, X, ChevronLeft } from "lucide-react"
+import { Check, Plus, Timer, X, ChevronLeft, Settings2 } from "lucide-react"
 import { finishWorkout } from "@/app/workout/actions"
 import { useRouter } from "next/navigation"
 
@@ -49,6 +49,11 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
   // Main Workout Timer State
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
+  // Default Rest Time (in seconds)
+  const [defaultRestTime, setDefaultRestTime] = useState(150)
+  const [isRestConfigOpen, setIsRestConfigOpen] = useState(false)
+  const [customRestInput, setCustomRestInput] = useState("2:30")
+
   const supabase = createClient()
   const router = useRouter()
 
@@ -85,6 +90,35 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
     return () => clearInterval(interval)
   }, [restTargetEndTime, session.created_at])
 
+  // --- Local Storage Sync ---
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const saved = localStorage.getItem(`workout_ui_${session.id}`)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed.completedSets) setCompletedSets(parsed.completedSets)
+        if (parsed.restTargetEndTime && parsed.restTargetEndTime > Date.now()) {
+          setRestTargetEndTime(parsed.restTargetEndTime)
+          setRestTimeLeft(Math.ceil((parsed.restTargetEndTime - Date.now()) / 1000))
+        }
+        if (parsed.defaultRestTime) {
+          setDefaultRestTime(parsed.defaultRestTime)
+          setCustomRestInput(formatTime(parsed.defaultRestTime))
+        }
+      }
+    } catch (e) {}
+  }, [session.id])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(`workout_ui_${session.id}`, JSON.stringify({
+      completedSets,
+      restTargetEndTime,
+      defaultRestTime
+    }))
+  }, [completedSets, restTargetEndTime, defaultRestTime, session.id])
+
   function startRestTimer(seconds: number) {
     setRestTargetEndTime(Date.now() + seconds * 1000)
     setRestTimeLeft(seconds)
@@ -99,7 +133,7 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
     setCompletedSets(prev => {
       const isNowComplete = !prev[setId]
       if (isNowComplete) {
-        startRestTimer(150) // 2m 30s
+        startRestTimer(defaultRestTime) // Configurable rest timer
       }
       return { ...prev, [setId]: isNowComplete }
     })
@@ -153,21 +187,39 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
     }
   }
 
-  async function addSet(workoutExerciseId: string) {
+  async function addSet(workoutExerciseId: string, parentSetNumber?: number) {
     const targetWe = workoutExercises.find(we => we.id === workoutExerciseId)
     if (!targetWe) return
 
-    const setNumber = targetWe.workout_sets.length + 1
-    const prevSet = targetWe.workout_sets[targetWe.workout_sets.length - 1]
-    const weight = prevSet ? prevSet.weight : null
+    let setNumber = targetWe.workout_sets.length + 1
+    let setType = "normal"
+    let weight = null
+    let reps = 0
+
+    if (parentSetNumber !== undefined) {
+      setNumber = parentSetNumber
+      setType = "dropset"
+      const parentSets = targetWe.workout_sets.filter(s => s.set_number === parentSetNumber)
+      if (parentSets.length > 0) {
+        weight = parentSets[parentSets.length - 1].weight
+        reps = parentSets[parentSets.length - 1].reps
+      }
+    } else {
+      const prevSet = targetWe.workout_sets[targetWe.workout_sets.length - 1]
+      weight = prevSet ? prevSet.weight : null
+      reps = prevSet ? prevSet.reps : 0
+      const maxSet = Math.max(...targetWe.workout_sets.map(s => s.set_number), 0)
+      setNumber = maxSet + 1
+    }
 
     const { data: newSet, error } = await supabase
       .from("workout_sets")
       .insert({
         workout_exercise_id: workoutExerciseId,
         set_number: setNumber,
+        set_type: setType,
         weight,
-        reps: 0,
+        reps,
       })
       .select()
       .single()
@@ -223,8 +275,25 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
       const end = new Date().getTime()
       const durationSeconds = Math.floor((end - start) / 1000)
 
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(`workout_ui_${session.id}`)
+      }
       await finishWorkout(session.id, durationSeconds, feeling, "Completed successfully")
     })
+  }
+
+  function applyRestTimerConfig() {
+    const parts = customRestInput.split(":")
+    let secs = 150
+    if (parts.length === 2) {
+      secs = parseInt(parts[0]) * 60 + parseInt(parts[1])
+    } else if (parts.length === 1) {
+      secs = parseInt(parts[0]) * 60
+    }
+    if (!isNaN(secs) && secs > 0) {
+      setDefaultRestTime(secs)
+      setIsRestConfigOpen(false)
+    }
   }
 
   // --- Render ---
@@ -249,9 +318,33 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
           </Button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{session.name}</h1>
-            <div className="flex items-center text-sm font-mono text-primary mt-1 bg-primary/10 px-2 py-0.5 rounded-full w-fit">
-              <Timer className="w-3.5 h-3.5 mr-1.5" />
-              <span>{formatTime(elapsedSeconds)}</span>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center text-sm font-mono text-primary bg-primary/10 px-2 py-0.5 rounded-full w-fit">
+                <Timer className="w-3.5 h-3.5 mr-1.5" />
+                <span>{formatTime(elapsedSeconds)}</span>
+              </div>
+              <Dialog open={isRestConfigOpen} onOpenChange={setIsRestConfigOpen}>
+                <DialogTrigger render={
+                  <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground">
+                    <Settings2 className="w-3 h-3 mr-1" /> {formatTime(defaultRestTime)} Rest
+                  </Button>
+                } />
+                <DialogContent className="max-w-xs rounded-xl bg-card border-border">
+                  <DialogHeader>
+                    <DialogTitle>Default Rest Timer</DialogTitle>
+                  </DialogHeader>
+                  <div className="py-4 space-y-4">
+                    <p className="text-sm text-muted-foreground">Set your default rest period between sets (MM:SS or MM).</p>
+                    <Input 
+                      value={customRestInput} 
+                      onChange={(e) => setCustomRestInput(e.target.value)} 
+                      placeholder="e.g. 2:30"
+                      className="bg-background"
+                    />
+                    <Button onClick={applyRestTimerConfig} className="w-full">Apply</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>
@@ -271,18 +364,27 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
             items={workoutExercises.map(we => we.id)}
             strategy={verticalListSortingStrategy}
           >
-            {workoutExercises.map((we) => (
-              <SortableExercise 
-                key={we.id} 
-                we={we} 
-                completedSets={completedSets}
-                toggleSetComplete={toggleSetComplete}
-                updateSet={updateSet}
-                removeSet={removeSet}
-                addSet={addSet}
-                removeExercise={removeExercise}
-              />
-            ))}
+            {workoutExercises.map((we, index) => {
+              const isSuperset = we.workout_sets.length > 0 && we.workout_sets.some(s => s.set_type === "superset")
+              
+              return (
+              <div key={we.id} className="relative">
+                {isSuperset && index > 0 && (
+                  <div className="absolute -top-6 left-6 w-4 h-8 border-l-2 border-b-2 border-primary/40 rounded-bl-xl z-0 pointer-events-none"></div>
+                )}
+                <div className="relative z-10">
+                  <SortableExercise 
+                    we={we} 
+                    completedSets={completedSets}
+                    toggleSetComplete={toggleSetComplete}
+                    updateSet={updateSet}
+                    removeSet={removeSet}
+                    addSet={addSet}
+                    removeExercise={removeExercise}
+                  />
+                </div>
+              </div>
+            )})}
           </SortableContext>
         </DndContext>
       </div>

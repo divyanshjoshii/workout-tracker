@@ -24,7 +24,7 @@ interface SortableExerciseProps {
   toggleSetComplete: (setId: string) => void
   updateSet: (weId: string, setId: string, field: any, value: any) => void
   removeSet: (weId: string, setId: string) => void
-  addSet: (weId: string) => void
+  addSet: (weId: string, parentSetNumber?: number) => void
   removeExercise: (weId: string) => void
 }
 
@@ -85,19 +85,25 @@ export function SortableExercise({
           </div>
           
           {we.workout_sets
-            .sort((a, b) => a.set_number - b.set_number)
+            .sort((a, b) => {
+              if (a.set_number !== b.set_number) return a.set_number - b.set_number
+              // If same set number, ensure dropsets come after normal sets, or just sort by created_at
+              return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            })
             .map((set, idx) => {
               const isCompleted = completedSets[set.id]
               const lastSet = lastSessionSets[idx]
+              const isDropset = set.set_type === "dropset"
               
               return (
-              <div key={set.id} className="space-y-1">
+              <div key={set.id} className={`space-y-1 ${isDropset ? 'pl-4 sm:pl-8 border-l-2 border-primary/20 ml-2 mt-1 relative' : ''}`}>
+                {isDropset && <div className="absolute top-1/2 -left-2 w-2 h-px bg-primary/20 -translate-y-1/2"></div>}
                 <div className={`grid grid-cols-[2rem_1fr_1fr_2.5rem] sm:grid-cols-[2.5rem_1fr_1fr_3rem_3rem] gap-2 items-center transition-colors rounded-md p-1 ${isCompleted ? 'bg-primary/5' : ''}`}>
                   <div className="relative text-center font-medium bg-secondary/20 text-secondary rounded-md h-9 flex items-center justify-center text-sm cursor-pointer group" onClick={() => {
                     const notes = prompt("Enter notes for this set:", set.notes || "")
                     if (notes !== null) updateSet(we.id, set.id, "notes", notes)
                   }}>
-                    {idx + 1}
+                    {isDropset ? "↳" : set.set_number}
                     {set.notes && <FileText className="absolute -top-1 -right-1 w-3 h-3 text-primary" />}
                     <span className="sr-only">Add Note</span>
                   </div>
@@ -162,14 +168,27 @@ export function SortableExercise({
                     </Button>
                   </div>
 
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 hidden sm:flex text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => removeSet(we.id, set.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="hidden sm:flex gap-1">
+                    {!isDropset && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Add Dropset"
+                        className="h-9 w-9 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                        onClick={() => addSet(we.id, set.set_number)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => removeSet(we.id, set.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
                 {/* Mobile set type */}
                 <div className="sm:hidden flex items-center gap-2 pl-10 pr-2">
@@ -183,6 +202,9 @@ export function SortableExercise({
                       <SelectItem value="superset">Superset</SelectItem>
                     </SelectContent>
                   </Select>
+                  {!isDropset && (
+                    <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2 ml-1" onClick={() => addSet(we.id, set.set_number)}>+ Drop</Button>
+                  )}
                   {set.notes && <span className="text-[10px] text-muted-foreground italic line-clamp-1">{set.notes}</span>}
                 </div>
               </div>

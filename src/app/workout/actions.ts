@@ -119,7 +119,7 @@ export async function saveAsTemplate(sessionId: string, templateName: string) {
   return template.id
 }
 
-export async function startWorkoutFromTemplate(templateId: string, formData?: FormData) {
+export async function startWorkoutFromTemplate(templateId: string, splitDayId?: string | null, formData?: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error("Not authenticated")
@@ -144,6 +144,7 @@ export async function startWorkoutFromTemplate(templateId: string, formData?: Fo
     .from("workout_sessions")
     .insert({
       user_id: user.id,
+      split_day_id: splitDayId || null,
       name: template.name.replace(/\s*template$/i, ""),
       date: formData?.get('localDate') as string || new Date().toISOString().split('T')[0]
     })
@@ -222,6 +223,7 @@ export async function getExerciseHistory(exerciseId: string, currentSessionId?: 
     .in("workout_exercise_id", weIds)
     .not("weight", "is", null)
     .order("weight", { ascending: false })
+    .order("reps", { ascending: false })
     .limit(1)
 
   // 3. Get last session data

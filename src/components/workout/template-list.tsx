@@ -35,7 +35,7 @@ function SortableTemplateItem({ template }: SortableTemplateItemProps) {
         <GripVertical className="h-5 w-5" />
       </div>
       
-      <form action={startWorkoutFromTemplate.bind(null, template.id)} className="flex-1 min-w-0">
+      <form action={startWorkoutFromTemplate.bind(null, template.id, null)} className="flex-1 min-w-0">
         <ClientDateInput />
         <Button type="submit" variant="outline" className="w-full justify-between h-14 text-lg font-medium border-border hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
           <span className="truncate pr-2">{template.name}</span>

@@ -199,7 +199,7 @@ export default async function DashboardPage() {
         {nextSplitDay && (
           <div className="space-y-2">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Suggested</h2>
-            <form action={matchingTemplate ? startWorkoutFromTemplate.bind(null, matchingTemplate.id) : startWorkout.bind(null, nextSplitDay.id)} className="block">
+            <form action={matchingTemplate ? startWorkoutFromTemplate.bind(null, matchingTemplate.id, nextSplitDay.id) : startWorkout.bind(null, nextSplitDay.id)} className="block">
               <Button type="submit" className="w-full h-16 text-lg font-bold shadow-md bg-primary hover:bg-primary/90 text-primary-foreground flex flex-col items-center justify-center relative overflow-hidden group">
                 <div className="absolute inset-0 bg-white/20 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                 <span className="flex items-center text-sm font-medium opacity-90 uppercase tracking-widest mb-0.5">
