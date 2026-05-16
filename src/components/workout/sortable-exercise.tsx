@@ -38,7 +38,7 @@ export function SortableExercise({
 }: SortableExerciseProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: we.id })
   
-  const [pr, setPr] = useState<{ weight: number | null, reps: number } | null>(null)
+  const [pr, setPr] = useState<{ weight: number | null, reps: number, e1rm?: number } | null>(null)
   const [lastSessionSets, setLastSessionSets] = useState<any[]>([])
   
   const style = {
@@ -95,7 +95,7 @@ export function SortableExercise({
           </CardTitle>
           {pr && pr.weight && (
             <div className="text-xs text-muted-foreground mt-1">
-              🏆 All-Time PR: <span className="font-semibold text-foreground">{pr.weight}kg x {pr.reps}</span>
+              🏆 All-Time PR: <span className="font-semibold text-foreground">{pr.weight}kg x {pr.reps}</span> {pr.e1rm && <span className="font-normal opacity-80">({pr.e1rm}kg e1RM)</span>}
             </div>
           )}
         </div>

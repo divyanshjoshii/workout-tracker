@@ -13,7 +13,7 @@ interface ExerciseProgressChartsProps {
 
 export function ExerciseProgressCharts({ exerciseId, userId }: ExerciseProgressChartsProps) {
   const [data, setData] = useState<any[]>([])
-  const [pr, setPr] = useState<{ weight: number, reps: number } | null>(null)
+  const [pr, setPr] = useState<{ weight: number, reps: number, e1rm: number } | null>(null)
   const [timeRange, setTimeRange] = useState<"all" | "year" | "month" | "week">("all")
   const supabase = createClient()
 
@@ -41,35 +41,36 @@ export function ExerciseProgressCharts({ exerciseId, userId }: ExerciseProgressC
 
       if (!setsData || setsData.length === 0) return
 
-      // Find PR
-      let maxWeight = 0
-      let maxReps = 0
-      setsData.forEach(s => {
-        if (s.weight && s.weight > maxWeight) {
-          maxWeight = s.weight
-          maxReps = s.reps
-        } else if (s.weight === maxWeight && s.reps > maxReps) {
-          maxReps = s.reps
-        }
-      })
-      if (maxWeight > 0) setPr({ weight: maxWeight, reps: maxReps })
-
-      // Process data for charts
-      const chartDataMap = new Map<string, number>()
+      // Find PR and Process data for charts
+      let maxE1RM = 0
+      let prSet: { weight: number, reps: number, e1rm: number } | null = null
+      const chartDataMap = new Map<string, { e1rm: number, weight: number, reps: number }>()
       
       setsData.forEach(s => {
-        const we = weData.find(w => w.id === s.workout_exercise_id)
-        if (we && s.weight) {
-          const dateStr = new Date((we as any).workout_sessions.created_at).toISOString().split('T')[0]
-          // Store max weight per day
-          const existing = chartDataMap.get(dateStr) || 0
-          if (s.weight > existing) {
-            chartDataMap.set(dateStr, s.weight)
+        if (s.weight && s.reps) {
+          const e1rm = Math.round(s.weight * (1 + s.reps / 30))
+          
+          if (e1rm > maxE1RM) {
+            maxE1RM = e1rm
+            prSet = { weight: s.weight, reps: s.reps, e1rm }
+          } else if (e1rm === maxE1RM && s.weight > (prSet?.weight || 0)) {
+            // Tie-breaker: heavier weight wins
+            prSet = { weight: s.weight, reps: s.reps, e1rm }
+          }
+
+          const we = weData.find(w => w.id === s.workout_exercise_id)
+          if (we) {
+            const dateStr = new Date((we as any).workout_sessions.created_at).toISOString().split('T')[0]
+            const existing = chartDataMap.get(dateStr)
+            if (!existing || e1rm > existing.e1rm) {
+              chartDataMap.set(dateStr, { e1rm, weight: s.weight, reps: s.reps })
+            }
           }
         }
       })
+      if (prSet) setPr(prSet)
 
-      const rawChartData = Array.from(chartDataMap.entries()).map(([date, weight]) => ({ date, weight }))
+      const rawChartData = Array.from(chartDataMap.entries()).map(([date, data]) => ({ date, ...data }))
       rawChartData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       
       setData(rawChartData)
@@ -101,9 +102,9 @@ export function ExerciseProgressCharts({ exerciseId, userId }: ExerciseProgressC
     <div className="space-y-4 mt-6">
       {pr && (
         <Card className="border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-transparent">
-          <CardContent className="p-4 flex justify-between items-center">
-            <span className="font-bold text-sm text-yellow-600 dark:text-yellow-500 uppercase tracking-wider">All-Time PR</span>
-            <span className="font-mono font-bold text-xl text-primary">{pr.weight}kg <span className="text-muted-foreground font-sans text-sm font-normal">x{pr.reps}</span></span>
+          <CardContent className="p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+            <span className="font-bold text-sm text-yellow-600 dark:text-yellow-500 uppercase tracking-wider">All-Time PR <span className="text-muted-foreground font-normal normal-case text-xs">(Est. 1RM)</span></span>
+            <span className="font-mono font-bold text-xl text-primary">{pr.weight}kg <span className="text-muted-foreground font-sans text-sm font-normal">x{pr.reps}</span> <span className="text-sm font-normal text-muted-foreground ml-1">({pr.e1rm}kg e1RM)</span></span>
           </CardContent>
         </Card>
       )}
@@ -111,7 +112,7 @@ export function ExerciseProgressCharts({ exerciseId, userId }: ExerciseProgressC
       <Card className="border-border bg-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex justify-between items-center">
-            <span>Weight Progression</span>
+            <span>Strength Progression <span className="text-xs font-normal text-muted-foreground ml-2">(Est. 1RM)</span></span>
           </CardTitle>
           <div className="flex gap-2 mt-2">
             {(["week", "month", "year", "all"] as const).map(range => (
@@ -138,8 +139,14 @@ export function ExerciseProgressCharts({ exerciseId, userId }: ExerciseProgressC
                   contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#f8fafc' }}
                   itemStyle={{ color: '#38bdf8' }}
                   labelFormatter={(val) => new Date(val).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                  formatter={(value: any, name: any, props: any) => {
+                     if (name === "Estimated 1RM (kg)") {
+                       return [`${value}kg (${props.payload.weight}kg x ${props.payload.reps})`, name]
+                     }
+                     return [value, name]
+                  }}
                 />
-                <Line type="monotone" dataKey="weight" name="Max Weight (kg)" stroke="#38bdf8" strokeWidth={3} dot={{ r: 4, fill: '#38bdf8', strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="e1rm" name="Estimated 1RM (kg)" stroke="#38bdf8" strokeWidth={3} dot={{ r: 4, fill: '#38bdf8', strokeWidth: 0 }} activeDot={{ r: 6 }} />
               </LineChart>
             </ResponsiveContainer>
           ) : (

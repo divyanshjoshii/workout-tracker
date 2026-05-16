@@ -216,15 +216,29 @@ export async function getExerciseHistory(exerciseId: string, currentSessionId?: 
 
   const weIds = weData.map(w => w.id)
 
-  // 2. Get PR (max weight)
-  const { data: prData } = await supabase
+  // 2. Get PR (max e1rm)
+  const { data: allSets } = await supabase
     .from("workout_sets")
     .select("weight, reps")
     .in("workout_exercise_id", weIds)
     .not("weight", "is", null)
-    .order("weight", { ascending: false })
-    .order("reps", { ascending: false })
-    .limit(1)
+
+  let prData: { weight: number, reps: number, e1rm: number } | null = null
+  let maxE1RM = 0
+  
+  if (allSets && allSets.length > 0) {
+    allSets.forEach(s => {
+      if (s.weight && s.reps) {
+        const e1rm = Math.round(s.weight * (1 + s.reps / 30))
+        if (e1rm > maxE1RM) {
+          maxE1RM = e1rm
+          prData = { weight: s.weight, reps: s.reps, e1rm }
+        } else if (e1rm === maxE1RM && s.weight > (prData?.weight || 0)) {
+          prData = { weight: s.weight, reps: s.reps, e1rm }
+        }
+      }
+    })
+  }
 
   // 3. Get last session data
   const sortedWe = [...weData].sort((a, b) => {
@@ -241,7 +255,7 @@ export async function getExerciseHistory(exerciseId: string, currentSessionId?: 
     .order("set_number", { ascending: true })
 
   return {
-    pr: prData && prData.length > 0 ? prData[0] : null,
+    pr: prData,
     lastSession: lastSessionSets || []
   }
 }
