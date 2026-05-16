@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check, Plus, Trash2, GripVertical, FileText, Weight } from "lucide-react"
 import { getExerciseHistory } from "@/app/workout/actions"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 type Exercise = Database["public"]["Tables"]["exercises"]["Row"]
 type WorkoutSet = Database["public"]["Tables"]["workout_sets"]["Row"]
@@ -85,7 +84,7 @@ export function SortableExercise({
                   className={`h-6 text-[10px] px-2 rounded-full border ${isLinkedToNext ? 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/20' : 'text-muted-foreground border-border hover:text-foreground'}`}
                   onClick={onToggleLink}
                 >
-                  {isLinkedToNext ? '🔗 Unlink' : '🔗 Link Next'}
+                  {isLinkedToNext ? '🔗 Unlink Superset' : '🔗 Superset Below'}
                 </Button>
               )}
             </div>
@@ -103,11 +102,10 @@ export function SortableExercise({
       
       <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
         <div className="space-y-3">
-          <div className="grid grid-cols-[2rem_1fr_1fr_2.5rem] sm:grid-cols-[2.5rem_1fr_1fr_3rem_3rem] gap-2 text-xs font-semibold text-muted-foreground uppercase text-center mb-2">
+          <div className="grid grid-cols-[2rem_1fr_1fr_2.5rem] gap-2 text-xs font-semibold text-muted-foreground uppercase text-center mb-2">
             <span>Set</span>
             <span>kg</span>
             <span>Reps</span>
-            <span className="hidden sm:inline">Type</span>
             <span>Done</span>
           </div>
           
@@ -125,7 +123,7 @@ export function SortableExercise({
               return (
               <div key={set.id} className={`space-y-1 ${isDropset ? 'pl-4 sm:pl-8 border-l-2 border-primary/20 ml-2 mt-1 relative' : ''}`}>
                 {isDropset && <div className="absolute top-1/2 -left-2 w-2 h-px bg-primary/20 -translate-y-1/2"></div>}
-                <div className={`grid grid-cols-[2rem_1fr_1fr_2.5rem] sm:grid-cols-[2.5rem_1fr_1fr_3rem_3rem] gap-2 items-center transition-colors rounded-md p-1 ${isCompleted ? 'bg-primary/5' : ''}`}>
+                <div className={`grid grid-cols-[2rem_1fr_1fr_2.5rem] gap-2 items-center transition-colors rounded-md p-1 ${isCompleted ? 'bg-primary/5' : ''}`}>
                   <div className="relative text-center font-medium bg-secondary/20 text-secondary rounded-md h-9 flex items-center justify-center text-sm cursor-pointer group" onClick={() => {
                     const notes = prompt("Enter notes for this set:", set.notes || "")
                     if (notes !== null) updateSet(we.id, set.id, "notes", notes)
@@ -161,19 +159,6 @@ export function SortableExercise({
                     onChange={(e) => updateSet(we.id, set.id, "reps", e.target.value)}
                     className={`h-9 text-center bg-background border-border placeholder:text-muted-foreground/40 ${isCompleted ? 'opacity-70 text-primary border-primary/50' : ''}`}
                   />
-                  
-                  <div className="hidden sm:block">
-                    <Select value={set.set_type || "normal"} onValueChange={(val) => updateSet(we.id, set.id, "set_type", val)}>
-                      <SelectTrigger className="h-9 px-1 text-xs text-center border-border">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="dropset">Drop</SelectItem>
-                        <SelectItem value="superset">Super</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
                   
                   <div className="flex flex-col gap-1 sm:flex-row">
                     <Button
@@ -217,18 +202,8 @@ export function SortableExercise({
                     </Button>
                   </div>
                 </div>
-                {/* Mobile set type */}
+                {/* Mobile / Extra controls */}
                 <div className="sm:hidden flex items-center gap-2 pl-10 pr-2">
-                  <Select value={set.set_type || "normal"} onValueChange={(val) => updateSet(we.id, set.id, "set_type", val)}>
-                    <SelectTrigger className="h-6 text-[10px] w-24 border-border bg-transparent">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="normal">Normal</SelectItem>
-                      <SelectItem value="dropset">Dropset</SelectItem>
-                      <SelectItem value="superset">Superset</SelectItem>
-                    </SelectContent>
-                  </Select>
                   {!isDropset && (
                     <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2 ml-1" onClick={() => addSet(we.id, set.set_number)}>+ Drop</Button>
                   )}

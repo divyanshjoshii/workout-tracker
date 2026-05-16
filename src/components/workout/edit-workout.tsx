@@ -321,7 +321,7 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises, ta
                         className={`h-6 text-[10px] px-2 rounded-full border ${isLinkedToNext ? 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/20' : 'text-muted-foreground border-border hover:text-foreground'}`}
                         onClick={() => toggleSupersetLink(index)}
                       >
-                        {isLinkedToNext ? '🔗 Unlink' : '🔗 Link Next'}
+                        {isLinkedToNext ? '🔗 Unlink Superset' : '🔗 Superset Below'}
                       </Button>
                     )}
                   </div>
