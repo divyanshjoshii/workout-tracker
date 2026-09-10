@@ -11,66 +11,99 @@ import { HallOfFameEditor } from "@/components/dashboard/hall-of-fame-editor"
 export default async function DashboardPage() {
   const { supabase, user } = await requireUser()
 
-  // 1. Fetch Profile
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("display_name, hall_of_fame")
-    .eq("id", user.id)
-    .single()
-
-  const displayName = profile?.display_name || user.email?.split("@")[0] || "Athlete"
-
-  // 2. Fetch Last Workout
-  const { data: lastWorkout } = await supabase
-    .from("workout_sessions")
-    .select("id, name, date, created_at, duration_seconds, split_day_id")
-    .eq("user_id", user.id)
-    .not("duration_seconds", "is", null) // Ensure it's completed
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single()
-
-  // 3. Fetch Workouts This Week
   const oneWeekAgo = new Date()
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
-  const { count: weeklyWorkouts } = await supabase
-    .from("workout_sessions")
-    .select("*", { count: 'exact', head: true })
-    .eq("user_id", user.id)
-    .gte("created_at", oneWeekAgo.toISOString())
-    .not("duration_seconds", "is", null)
 
-  // 4. Fetch Latest Body Weight
-  const { data: latestWeight } = await supabase
-    .from("body_weight_entries")
-    .select("weight")
-    .eq("user_id", user.id)
-    .order("date", { ascending: false })
-    .limit(1)
-    .single()
+  // Round 1. Everything that needs nothing but user.id, so it all goes at once.
+  // These were sequential awaits and cost one round trip each.
+  const [
+    { data: profile },
+    { data: lastWorkout },
+    { count: weeklyWorkouts },
+    { data: latestWeight },
+    { data: activeSplit },
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("display_name, hall_of_fame")
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("workout_sessions")
+      .select("id, name, date, created_at, duration_seconds, split_day_id")
+      .eq("user_id", user.id)
+      .not("duration_seconds", "is", null) // Ensure it's completed
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single(),
+    supabase
+      .from("workout_sessions")
+      .select("*", { count: 'exact', head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", oneWeekAgo.toISOString())
+      .not("duration_seconds", "is", null),
+    supabase
+      .from("body_weight_entries")
+      .select("weight")
+      .eq("user_id", user.id)
+      .order("date", { ascending: false })
+      .limit(1)
+      .single(),
+    supabase
+      .from("splits")
+      .select("id, name")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .single(),
+  ])
 
-  // 5. Smart Next Workout Suggestion based on Split Schedule
+  const displayName = profile?.display_name || user.email?.split("@")[0] || "Athlete"
+  const hofIds: string[] = profile?.hall_of_fame || []
+
   let nextSplitDay: any = null
   let matchingTemplate: any = null
-  
-  const { data: activeSplit } = await supabase
-    .from("splits")
-    .select("id, name")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .single()
+
+  // Round 2. Split days and the hall of fame do not depend on each other.
+  // Each hall of fame entry asks for its single heaviest set rather than every
+  // set ever recorded.
+  const [{ data: splitDays }, { data: hofNames }, ...hofPrs] = await Promise.all([
+    activeSplit
+      ? supabase
+          .from("split_days")
+          .select("*")
+          .eq("split_id", activeSplit.id)
+          .order("day_order", { ascending: true })
+      : Promise.resolve({ data: null as any }),
+    hofIds.length > 0
+      ? supabase.from("exercises").select("id, name").in("id", hofIds)
+      : Promise.resolve({ data: [] as any[] }),
+    ...hofIds.map((id) =>
+      supabase
+        .from("workout_sets")
+        .select("weight, reps, workout_exercises!inner(exercise_id)")
+        .eq("workout_exercises.exercise_id", id)
+        .not("weight", "is", null)
+        .order("weight", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    ),
+  ])
+
+  const hallOfFame = hofIds.map((id, i) => {
+    const name = (hofNames ?? []).find((e: any) => e.id === id)?.name ?? ""
+    const best = (hofPrs[i] as any)?.data
+    return {
+      id,
+      name,
+      pr: best ? { weight: best.weight, reps: best.reps } : { weight: 0, reps: 0 },
+    }
+  }).filter((x) => x.name)
 
   if (activeSplit) {
-    const { data: splitDays } = await supabase
-      .from("split_days")
-      .select("*")
-      .eq("split_id", activeSplit.id)
-      .order("day_order", { ascending: true })
-
     if (splitDays && splitDays.length > 0) {
       if (lastWorkout && lastWorkout.split_day_id) {
         // Find what was completed last
-        const lastIndex = splitDays.findIndex(d => d.id === lastWorkout.split_day_id)
+        const lastIndex = splitDays.findIndex((d: any) => d.id === lastWorkout.split_day_id)
         if (lastIndex !== -1) {
           nextSplitDay = splitDays[(lastIndex + 1) % splitDays.length]
         } else {
@@ -94,31 +127,6 @@ export default async function DashboardPage() {
       matchingTemplate = templateMatch
     }
   }
-
-  // 6. Hall of Fame -- the picked exercises plus each one's heaviest set.
-  const hofIds = profile?.hall_of_fame || []
-  let hallOfFame: { id: string; name: string; pr: { weight: number; reps: number } }[] = []
-
-  if (hofIds.length > 0) {
-    const { data: hofRows } = await supabase
-      .from("exercises")
-      .select("id, name, workout_exercises(workout_sets(weight, reps))")
-      .in("id", hofIds)
-
-    hallOfFame = (hofRows ?? []).map((ex: any) => {
-      const sets = (ex.workout_exercises ?? []).flatMap((we: any) => we.workout_sets ?? [])
-      const heaviest = sets
-        .filter((set: any) => set.weight !== null)
-        .sort((a: any, b: any) => b.weight - a.weight)[0]
-      return { id: ex.id, name: ex.name, pr: heaviest ?? { weight: 0, reps: 0 } }
-    })
-  }
-
-  // Fetch all exercises for the editor
-  const { data: allExercises } = await supabase
-    .from("exercises")
-    .select("id, name, muscle_group")
-    .order("name", { ascending: true })
 
   return (
     <div className="flex flex-col p-4 space-y-6 max-w-lg mx-auto pb-24">
@@ -144,7 +152,7 @@ export default async function DashboardPage() {
               <Trophy className="w-5 h-5 text-yellow-500" />
               <h2 className="font-bold text-sm text-yellow-600 dark:text-yellow-500 uppercase tracking-wider">Hall of Fame</h2>
             </div>
-            <HallOfFameEditor allExercises={allExercises || []} currentSelections={hofIds} />
+            <HallOfFameEditor currentSelections={hofIds} />
           </div>
           <div className="space-y-2">
             {hallOfFame.length > 0 ? hallOfFame.map((item, idx) => (

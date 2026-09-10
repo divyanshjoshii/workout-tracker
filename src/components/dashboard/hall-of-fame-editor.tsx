@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { updateHallOfFame } from "@/app/actions"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -9,13 +10,28 @@ import { Check, Edit2, Search, X } from "lucide-react"
 
 type Exercise = { id: string, name: string, muscle_group: string }
 
-export function HallOfFameEditor({ allExercises, currentSelections }: { allExercises: Exercise[], currentSelections: string[] }) {
+export function HallOfFameEditor({ currentSelections }: { currentSelections: string[] }) {
   const [open, setOpen] = useState(false)
+  const [exercises, setExercises] = useState<Exercise[]>([])
+  const [loading, setLoading] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>(currentSelections)
   const [search, setSearch] = useState("")
   const [isPending, setIsPending] = useState(false)
 
-  const filteredExercises = allExercises.filter(ex => 
+  // Loaded when the dialog opens instead of on every dashboard render. The table
+  // holds around 870 rows and this list shows at most 50 of them.
+  async function loadExercises() {
+    if (exercises.length > 0 || loading) return
+    setLoading(true)
+    const { data } = await createClient()
+      .from("exercises")
+      .select("id, name, muscle_group")
+      .order("name", { ascending: true })
+    setExercises(data ?? [])
+    setLoading(false)
+  }
+
+  const filteredExercises = exercises.filter(ex =>
     ex.name.toLowerCase().includes(search.toLowerCase()) || 
     ex.muscle_group.toLowerCase().includes(search.toLowerCase())
   ).slice(0, 50) // Limit display for performance
@@ -46,7 +62,10 @@ export function HallOfFameEditor({ allExercises, currentSelections }: { allExerc
   return (
     <Dialog open={open} onOpenChange={(val) => {
       setOpen(val)
-      if (val) setSelectedIds(currentSelections) // Reset on open
+      if (val) {
+        setSelectedIds(currentSelections) // Reset on open
+        loadExercises()
+      }
     }}>
       <DialogTrigger render={<Button variant="ghost" size="icon" className="h-6 w-6 text-yellow-600 dark:text-yellow-500 hover:text-yellow-700 hover:bg-yellow-500/20" />}>
         <Edit2 className="h-3 w-3" />
@@ -62,7 +81,7 @@ export function HallOfFameEditor({ allExercises, currentSelections }: { allExerc
         {/* Selected Badges */}
         <div className="flex flex-wrap gap-2 pt-2">
           {selectedIds.map(id => {
-            const ex = allExercises.find(e => e.id === id)
+            const ex = exercises.find(e => e.id === id)
             if (!ex) return null
             return (
               <div key={id} className="flex items-center gap-1 bg-yellow-500/20 text-yellow-700 dark:text-yellow-500 px-2 py-1 rounded-md text-xs font-medium">
