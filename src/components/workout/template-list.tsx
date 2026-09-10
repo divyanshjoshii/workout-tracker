@@ -1,17 +1,17 @@
 "use client"
 
 import { useState } from "react"
-import { Database } from "@/types/database"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Plus, GripVertical, Copy } from "lucide-react"
 import { ClientDateInput } from "@/app/workout/client-date-input"
-import { startWorkoutFromTemplate } from "@/app/workout/actions"
-import { updateTemplateOrder } from "@/app/workout/actions"
+import { startWorkoutFromTemplate, updateTemplateOrder } from "@/app/workout/actions"
 
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+
+import type { Database } from "@/types/database"
 
 type Template = Database["public"]["Tables"]["workout_templates"]["Row"]
 

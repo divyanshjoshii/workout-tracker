@@ -90,7 +90,8 @@ CREATE TABLE public.body_weight_entries (
   date date DEFAULT current_date NOT NULL,
   weight numeric NOT NULL,
   note text,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  UNIQUE (user_id, date)
 );
 
 -- Workout Templates Table

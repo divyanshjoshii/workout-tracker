@@ -1,16 +1,10 @@
-import { createClient } from "@/lib/supabase/server"
+import { requireUser } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { ActiveWorkout } from "@/components/workout/active-workout"
 
 export default async function WorkoutSessionPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect("/login")
-  }
+  const { supabase, user } = await requireUser()
 
   // Fetch the session
   const { data: session } = await supabase

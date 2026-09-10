@@ -1,5 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
+import { requireUser } from "@/lib/supabase/server"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dumbbell, Plus, Copy } from "lucide-react"
@@ -9,13 +8,7 @@ import { ClientDateInput } from "./client-date-input"
 import { TemplateList } from "@/components/workout/template-list"
 
 export default async function WorkoutStartPage() {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect("/login")
-  }
+  const { supabase, user } = await requireUser()
 
   // Fetch active split
   const { data: activeSplit } = await supabase

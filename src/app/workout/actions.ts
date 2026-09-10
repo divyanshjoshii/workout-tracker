@@ -1,16 +1,12 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/server"
+import { createClient, requireUserAction } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
+import { bestSet } from "@/lib/e1rm"
 
 export async function startWorkout(splitDayId: string | null, formData?: FormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Not authenticated")
-  }
+  const { supabase, user } = await requireUserAction()
 
   // Get the split day name if provided
   let name = "Custom Workout"
@@ -44,12 +40,7 @@ export async function startWorkout(splitDayId: string | null, formData?: FormDat
 }
 
 export async function finishWorkout(sessionId: string, durationSeconds: number, feeling: string, notes: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Not authenticated")
-  }
+  const { supabase, user } = await requireUserAction()
 
   const { error } = await supabase
     .from("workout_sessions")
@@ -71,9 +62,7 @@ export async function finishWorkout(sessionId: string, durationSeconds: number, 
 }
 
 export async function saveAsTemplate(sessionId: string, templateName: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error("Not authenticated")
+  const { supabase, user } = await requireUserAction()
 
   // Fetch session exercises and their sets
   const { data: workoutExercises } = await supabase
@@ -120,9 +109,7 @@ export async function saveAsTemplate(sessionId: string, templateName: string) {
 }
 
 export async function startWorkoutFromTemplate(templateId: string, splitDayId?: string | null, formData?: FormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error("Not authenticated")
+  const { supabase, user } = await requireUserAction()
 
   // Fetch template and its exercises
   const { data: template } = await supabase
@@ -223,22 +210,7 @@ export async function getExerciseHistory(exerciseId: string, currentSessionId?: 
     .in("workout_exercise_id", weIds)
     .not("weight", "is", null)
 
-  let prData: { weight: number, reps: number, e1rm: number } | null = null
-  let maxE1RM = 0
-  
-  if (allSets && allSets.length > 0) {
-    allSets.forEach(s => {
-      if (s.weight && s.reps) {
-        const e1rm = Math.round(s.weight * (1 + s.reps / 30))
-        if (e1rm > maxE1RM) {
-          maxE1RM = e1rm
-          prData = { weight: s.weight, reps: s.reps, e1rm }
-        } else if (e1rm === maxE1RM && s.weight > (prData?.weight || 0)) {
-          prData = { weight: s.weight, reps: s.reps, e1rm }
-        }
-      }
-    })
-  }
+  const prData = bestSet(allSets ?? [])
 
   // 3. Get last session data
   const sortedWe = [...weData].sort((a, b) => {
@@ -261,18 +233,17 @@ export async function getExerciseHistory(exerciseId: string, currentSessionId?: 
 }
 
 export async function updateTemplateOrder(updates: { id: string, template_order: number }[]) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error("Not authenticated")
+  const { supabase, user } = await requireUserAction()
 
-  // Update order for each template
-  for (const update of updates) {
-    await supabase
-      .from("workout_templates")
-      .update({ template_order: update.template_order })
-      .eq("id", update.id)
-      .eq("user_id", user.id)
-  }
+  await Promise.all(
+    updates.map((update) =>
+      supabase
+        .from("workout_templates")
+        .update({ template_order: update.template_order })
+        .eq("id", update.id)
+        .eq("user_id", user.id)
+    )
+  )
 
   revalidatePath("/workout")
   revalidatePath("/")

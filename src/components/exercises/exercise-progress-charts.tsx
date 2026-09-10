@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { Button } from "@/components/ui/button"
+import { bestSet, e1rm } from "@/lib/e1rm"
 
 interface ExerciseProgressChartsProps {
   exerciseId: string
@@ -41,34 +42,21 @@ export function ExerciseProgressCharts({ exerciseId, userId }: ExerciseProgressC
 
       if (!setsData || setsData.length === 0) return
 
-      // Find PR and Process data for charts
-      let maxE1RM = 0
-      let prSet: { weight: number, reps: number, e1rm: number } | null = null
-      const chartDataMap = new Map<string, { e1rm: number, weight: number, reps: number }>()
-      
-      setsData.forEach(s => {
-        if (s.weight && s.reps) {
-          const e1rm = Math.round(s.weight * (1 + s.reps / 30))
-          
-          if (e1rm > maxE1RM) {
-            maxE1RM = e1rm
-            prSet = { weight: s.weight, reps: s.reps, e1rm }
-          } else if (e1rm === maxE1RM && s.weight > (prSet?.weight || 0)) {
-            // Tie-breaker: heavier weight wins
-            prSet = { weight: s.weight, reps: s.reps, e1rm }
-          }
+      setPr(bestSet(setsData))
 
-          const we = weData.find(w => w.id === s.workout_exercise_id)
-          if (we) {
-            const dateStr = new Date((we as any).workout_sessions.created_at).toISOString().split('T')[0]
-            const existing = chartDataMap.get(dateStr)
-            if (!existing || e1rm > existing.e1rm) {
-              chartDataMap.set(dateStr, { e1rm, weight: s.weight, reps: s.reps })
-            }
-          }
+      // Best estimated 1RM per day, for the progression line.
+      const chartDataMap = new Map<string, { e1rm: number, weight: number, reps: number }>()
+      setsData.forEach(s => {
+        if (!s.weight || !s.reps) return
+        const we = weData.find(w => w.id === s.workout_exercise_id)
+        if (!we) return
+        const score = e1rm(s.weight, s.reps)
+        const dateStr = new Date((we as any).workout_sessions.created_at).toISOString().split('T')[0]
+        const existing = chartDataMap.get(dateStr)
+        if (!existing || score > existing.e1rm) {
+          chartDataMap.set(dateStr, { e1rm: score, weight: s.weight, reps: s.reps })
         }
       })
-      if (prSet) setPr(prSet)
 
       const rawChartData = Array.from(chartDataMap.entries()).map(([date, data]) => ({ date, ...data }))
       rawChartData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())

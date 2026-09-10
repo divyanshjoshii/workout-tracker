@@ -41,10 +41,6 @@ export function ActiveWorkoutBanner() {
     }
 
     checkActiveWorkout()
-
-    // Optionally check periodically or listen to route changes
-    const interval = setInterval(checkActiveWorkout, 5000)
-    return () => clearInterval(interval)
   }, [supabase, pathname])
 
   useEffect(() => {

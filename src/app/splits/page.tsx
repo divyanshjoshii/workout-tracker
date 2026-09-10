@@ -1,18 +1,11 @@
-import { createClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
+import { requireUser } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 import { SplitCard } from "@/components/splits/split-card"
 
 export default async function SplitsPage() {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect("/login")
-  }
+  const { supabase, user } = await requireUser()
 
   // Fetch all splits for the user, including their days
   const { data: splits } = await supabase

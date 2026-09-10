@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { requireUser } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { ArrowLeft, Dumbbell, Activity, Target } from "lucide-react"
 import Link from "next/link"
@@ -8,13 +8,7 @@ import { ExerciseProgressCharts } from "@/components/exercises/exercise-progress
 
 export default async function ExerciseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect("/login")
-  }
+  const { supabase, user } = await requireUser()
 
   const { data: exercise } = await supabase
     .from("exercises")
@@ -85,12 +79,6 @@ export default async function ExerciseDetailPage({ params }: { params: Promise<{
         </div>
         
         <ExerciseProgressCharts exerciseId={exercise.id} userId={user.id} />
-        
-        <div className="pt-6">
-          <Button className="w-full h-12 text-base font-semibold shadow-md">
-            Add to Workout
-          </Button>
-        </div>
       </div>
     </div>
   )

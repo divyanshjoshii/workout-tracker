@@ -1,15 +1,10 @@
-import { createClient } from "@/lib/supabase/server"
+import { requireUser } from "@/lib/supabase/server"
 import { notFound, redirect } from "next/navigation"
 import { EditWorkout } from "@/components/workout/edit-workout"
 
 export default async function EditWorkoutPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    redirect("/login")
-  }
+  const { supabase, user } = await requireUser()
 
   // 1. Fetch Session
   const { data: session } = await supabase

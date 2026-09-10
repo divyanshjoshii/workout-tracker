@@ -1,5 +1,6 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 
 export async function createClient() {
   const cookieStore = await cookies()
@@ -26,4 +27,21 @@ export async function createClient() {
       },
     }
   )
+}
+
+// Every page and action starts by resolving the signed-in user. The proxy already
+// bounces anonymous requests to /login, so these only ever trip on an expired
+// session mid-request -- but they also narrow `user` away from null for callers.
+export async function requireUser() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/login")
+  return { supabase, user }
+}
+
+export async function requireUserAction() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Not authenticated")
+  return { supabase, user }
 }

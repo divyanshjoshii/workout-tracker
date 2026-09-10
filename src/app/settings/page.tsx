@@ -1,17 +1,10 @@
-import { createClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
+import { requireUser } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Download, LogOut, Smartphone, User } from "lucide-react"
 
 export default async function SettingsPage() {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect("/login")
-  }
+  const { supabase, user } = await requireUser()
 
   // Fetch Profile Name
   const { data: profile } = await supabase

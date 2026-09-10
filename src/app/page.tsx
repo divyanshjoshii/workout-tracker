@@ -1,5 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
+import { requireUser } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dumbbell, LogOut, Settings, Trophy, ChevronRight, Play } from "lucide-react"
@@ -10,13 +9,7 @@ import { startWorkout, startWorkoutFromTemplate } from "@/app/workout/actions"
 import { HallOfFameEditor } from "@/components/dashboard/hall-of-fame-editor"
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect("/login")
-  }
+  const { supabase, user } = await requireUser()
 
   // 1. Fetch Profile
   const { data: profile } = await supabase
@@ -102,43 +95,23 @@ export default async function DashboardPage() {
     }
   }
 
-  // 6. Hall of Fame (Top PRs for custom selection)
-  let hallOfFame: any[] = []
+  // 6. Hall of Fame -- the picked exercises plus each one's heaviest set.
   const hofIds = profile?.hall_of_fame || []
-  
+  let hallOfFame: { id: string; name: string; pr: { weight: number; reps: number } }[] = []
+
   if (hofIds.length > 0) {
-    const { data: exercises } = await supabase
+    const { data: hofRows } = await supabase
       .from("exercises")
-      .select("id, name")
+      .select("id, name, workout_exercises(workout_sets(weight, reps))")
       .in("id", hofIds)
-      
-    if (exercises && exercises.length > 0) {
-      for (const ex of exercises) {
-        const { data: weData } = await supabase
-          .from("workout_exercises")
-          .select("id")
-          .eq("exercise_id", ex.id)
-        
-        let pr = { weight: 0, reps: 0 }
-        
-        if (weData && weData.length > 0) {
-          const weIds = weData.map(w => w.id)
-          const { data: prData } = await supabase
-            .from("workout_sets")
-            .select("weight, reps")
-            .in("workout_exercise_id", weIds)
-            .not("weight", "is", null)
-            .order("weight", { ascending: false })
-            .limit(1)
-          
-          if (prData && prData.length > 0) {
-            pr = prData[0]
-          }
-        }
-        
-        hallOfFame.push({ id: ex.id, name: ex.name, pr: pr })
-      }
-    }
+
+    hallOfFame = (hofRows ?? []).map((ex: any) => {
+      const sets = (ex.workout_exercises ?? []).flatMap((we: any) => we.workout_sets ?? [])
+      const heaviest = sets
+        .filter((set: any) => set.weight !== null)
+        .sort((a: any, b: any) => b.weight - a.weight)[0]
+      return { id: ex.id, name: ex.name, pr: heaviest ?? { weight: 0, reps: 0 } }
+    })
   }
 
   // Fetch all exercises for the editor

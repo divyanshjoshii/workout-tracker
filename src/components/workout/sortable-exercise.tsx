@@ -3,19 +3,13 @@
 import { useState, useEffect } from "react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Database } from "@/types/database"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check, Plus, Trash2, GripVertical, FileText, Weight } from "lucide-react"
 import { getExerciseHistory } from "@/app/workout/actions"
 
-type Exercise = Database["public"]["Tables"]["exercises"]["Row"]
-type WorkoutSet = Database["public"]["Tables"]["workout_sets"]["Row"]
-type WorkoutExercise = Database["public"]["Tables"]["workout_exercises"]["Row"] & {
-  exercises: Exercise
-  workout_sets: WorkoutSet[]
-}
+import type { WorkoutExercise } from "./types"
 
 interface SortableExerciseProps {
   we: WorkoutExercise

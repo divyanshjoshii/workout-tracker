@@ -1,15 +1,8 @@
-import { createClient } from "@/lib/supabase/server"
+import { requireUser } from "@/lib/supabase/server"
 import { ExerciseListClient } from "./exercise-list-client"
-import { redirect } from "next/navigation"
 
 export default async function ExercisesPage() {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect("/login")
-  }
+  const { supabase, user } = await requireUser()
 
   // Fetch all exercises
   const { data: exercises } = await supabase

@@ -1,13 +1,10 @@
 "use client"
 
 import { useState, useTransition, useEffect } from "react"
-import { Database } from "@/types/database"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Check, Plus, Timer, X, ChevronLeft, Settings2 } from "lucide-react"
+import { Check, Timer, X, ChevronLeft, Settings2 } from "lucide-react"
 import { finishWorkout } from "@/app/workout/actions"
 import { useRouter } from "next/navigation"
 
@@ -16,14 +13,10 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { restrictToVerticalAxis, restrictToWindowEdges } from '@dnd-kit/modifiers'
 
 import { SortableExercise } from "./sortable-exercise"
-
-type Exercise = Database["public"]["Tables"]["exercises"]["Row"]
-type Session = Database["public"]["Tables"]["workout_sessions"]["Row"]
-type WorkoutSet = Database["public"]["Tables"]["workout_sets"]["Row"]
-type WorkoutExercise = Database["public"]["Tables"]["workout_exercises"]["Row"] & {
-  exercises: Exercise
-  workout_sets: WorkoutSet[]
-}
+import { ExercisePicker } from "./exercise-picker"
+import { FeelingSelector, type Feeling } from "./feeling-selector"
+import { useWorkoutExercises } from "./use-workout-exercises"
+import { supersetFlags, type Exercise, type Session, type WorkoutExercise } from "./types"
 
 interface ActiveWorkoutProps {
   session: Session
@@ -33,28 +26,25 @@ interface ActiveWorkoutProps {
 }
 
 export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, targetMuscles = [] }: ActiveWorkoutProps) {
-  const [workoutExercises, setWorkoutExercises] = useState<WorkoutExercise[]>(initialWorkoutExercises)
-  const [isAddExerciseOpen, setIsAddExerciseOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [showTargetedOnly, setShowTargetedOnly] = useState(targetMuscles.length > 0)
+  const {
+    workoutExercises, setWorkoutExercises, supabase,
+    addExercise, removeExercise, addSet, updateSet, removeSet, toggleSupersetLink,
+  } = useWorkoutExercises(session.id, initialWorkoutExercises)
+
   const [isPending, startTransition] = useTransition()
-  const [feeling, setFeeling] = useState<"Easy" | "Medium" | "Hard">("Medium")
-  
+  const [feeling, setFeeling] = useState<Feeling>("Medium")
+
   const [completedSets, setCompletedSets] = useState<Record<string, boolean>>({})
 
-  // Rest Timer State
-  const [restTargetEndTime, setRestTargetEndTime] = useState<number | null>(null)
-  const [restTimeLeft, setRestTimeLeft] = useState<number | null>(null)
-
-  // Main Workout Timer State
-  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  // One clock drives both timers below.
+  const [now, setNow] = useState(() => Date.now())
+  const [restEndsAt, setRestEndsAt] = useState<number | null>(null)
 
   // Default Rest Time (in seconds)
   const [defaultRestTime, setDefaultRestTime] = useState(150)
   const [isRestConfigOpen, setIsRestConfigOpen] = useState(false)
   const [customRestInput, setCustomRestInput] = useState("2:30")
 
-  const supabase = createClient()
   const router = useRouter()
 
   const sensors = useSensors(
@@ -64,69 +54,42 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
 
   // --- Timer Logic ---
   useEffect(() => {
-    const sessionStart = new Date(session.created_at).getTime()
-    
-    const interval = setInterval(() => {
-      // Main timer
-      const now = Date.now()
-      setElapsedSeconds(Math.floor((now - sessionStart) / 1000))
-
-      // Rest timer
-      if (restTargetEndTime !== null) {
-        const remaining = Math.ceil((restTargetEndTime - now) / 1000)
-        if (remaining > 0) {
-          setRestTimeLeft(remaining)
-        } else {
-          setRestTimeLeft(0)
-          setRestTargetEndTime(null)
-          if (typeof window !== "undefined" && window.navigator && window.navigator.vibrate) {
-            window.navigator.vibrate([200, 100, 200])
-          }
-        }
-      }
-    }, 1000)
-
-    setElapsedSeconds(Math.floor((Date.now() - sessionStart) / 1000))
+    const interval = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(interval)
-  }, [restTargetEndTime, session.created_at])
+  }, [])
+
+  const elapsedSeconds = Math.floor((now - new Date(session.created_at).getTime()) / 1000)
+  const restTimeLeft = restEndsAt === null ? null : Math.max(0, Math.ceil((restEndsAt - now) / 1000))
+
+  useEffect(() => {
+    if (restTimeLeft === 0) navigator.vibrate?.([200, 100, 200])
+  }, [restTimeLeft])
 
   // --- Local Storage Sync ---
   useEffect(() => {
-    if (typeof window === "undefined") return;
     try {
       const saved = localStorage.getItem(`workout_ui_${session.id}`)
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (parsed.completedSets) setCompletedSets(parsed.completedSets)
-        if (parsed.restTargetEndTime && parsed.restTargetEndTime > Date.now()) {
-          setRestTargetEndTime(parsed.restTargetEndTime)
-          setRestTimeLeft(Math.ceil((parsed.restTargetEndTime - Date.now()) / 1000))
-        }
-        if (parsed.defaultRestTime) {
-          setDefaultRestTime(parsed.defaultRestTime)
-          setCustomRestInput(formatTime(parsed.defaultRestTime))
-        }
+      if (!saved) return
+      const parsed = JSON.parse(saved)
+      if (parsed.completedSets) setCompletedSets(parsed.completedSets)
+      if (parsed.restEndsAt > Date.now()) setRestEndsAt(parsed.restEndsAt)
+      if (parsed.defaultRestTime) {
+        setDefaultRestTime(parsed.defaultRestTime)
+        setCustomRestInput(formatTime(parsed.defaultRestTime))
       }
-    } catch (e) {}
+    } catch {}
   }, [session.id])
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
     localStorage.setItem(`workout_ui_${session.id}`, JSON.stringify({
       completedSets,
-      restTargetEndTime,
+      restEndsAt,
       defaultRestTime
     }))
-  }, [completedSets, restTargetEndTime, defaultRestTime, session.id])
+  }, [completedSets, restEndsAt, defaultRestTime, session.id])
 
   function startRestTimer(seconds: number) {
-    setRestTargetEndTime(Date.now() + seconds * 1000)
-    setRestTimeLeft(seconds)
-  }
-
-  function stopRestTimer() {
-    setRestTargetEndTime(null)
-    setRestTimeLeft(null)
+    setRestEndsAt(Date.now() + seconds * 1000)
   }
 
   function toggleSetComplete(setId: string) {
@@ -139,214 +102,47 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
     })
   }
 
-  // --- Actions ---
-  async function addExercise(exerciseId: string) {
-    const order = workoutExercises.length + 1
-    const { data: newWe, error } = await supabase
-      .from("workout_exercises")
-      .insert({
-        session_id: session.id,
-        exercise_id: exerciseId,
-        exercise_order: order,
-      })
-      .select(`*, exercises(*)`)
-      .single()
-
-    if (!error && newWe) {
-      setWorkoutExercises([...workoutExercises, { ...newWe, workout_sets: [] } as WorkoutExercise])
-      setIsAddExerciseOpen(false)
-    }
-  }
-
-  async function removeExercise(weId: string) {
-    setWorkoutExercises(prev => prev.filter(we => we.id !== weId))
-    await supabase.from("workout_exercises").delete().eq("id", weId)
-  }
-
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
-    if (over && active.id !== over.id) {
-      setWorkoutExercises((items) => {
-        const oldIndex = items.findIndex((i) => i.id === active.id)
-        const newIndex = items.findIndex((i) => i.id === over.id)
-        
-        const draggedItem = items[oldIndex]
-        if (draggedItem.superset_id) {
-           draggedItem.superset_id = null
-           supabase.from("workout_exercises").update({ superset_id: null }).eq("id", draggedItem.id).then()
-        }
+    if (!over || active.id === over.id) return
 
-        const newItems = arrayMove(items, oldIndex, newIndex)
-        
-        // Update DB
-        const updates = newItems.map((item, index) => ({
-          id: item.id,
-          exercise_order: index + 1
-        }))
-        
-        // Fire and forget updates
-        updates.forEach(async (update) => {
-          await supabase.from("workout_exercises").update({ exercise_order: update.exercise_order }).eq("id", update.id)
-        })
+    setWorkoutExercises((items) => {
+      const oldIndex = items.findIndex((i) => i.id === active.id)
+      const newIndex = items.findIndex((i) => i.id === over.id)
 
-        return newItems
+      // A dragged exercise leaves whatever superset it was part of.
+      const draggedItem = items[oldIndex]
+      if (draggedItem.superset_id) {
+        draggedItem.superset_id = null
+        supabase.from("workout_exercises").update({ superset_id: null }).eq("id", draggedItem.id).then()
+      }
+
+      const newItems = arrayMove(items, oldIndex, newIndex)
+
+      // Fire and forget the reorder.
+      newItems.forEach((item, index) => {
+        supabase.from("workout_exercises").update({ exercise_order: index + 1 }).eq("id", item.id).then()
       })
-    }
-  }
 
-  async function toggleSupersetLink(currentIndex: number) {
-    const currentWe = workoutExercises[currentIndex]
-    const nextWe = workoutExercises[currentIndex + 1]
-    if (!nextWe) return
-
-    const isLinked = currentWe.superset_id && currentWe.superset_id === nextWe.superset_id
-
-    if (isLinked) {
-      // Unlink nextWe
-      await supabase.from("workout_exercises").update({ superset_id: null }).eq("id", nextWe.id)
-      setWorkoutExercises(prev => prev.map((we, idx) => {
-        if (idx === currentIndex + 1) return { ...we, superset_id: null }
-        return we
-      }))
-
-      // If currentWe is no longer linked to anything, clear its superset_id
-      const otherLinked = workoutExercises.some((we, idx) => idx !== currentIndex && idx !== currentIndex + 1 && we.superset_id === currentWe.superset_id)
-      if (!otherLinked) {
-        await supabase.from("workout_exercises").update({ superset_id: null }).eq("id", currentWe.id)
-        setWorkoutExercises(prev => prev.map(we => we.id === currentWe.id ? { ...we, superset_id: null } : we))
-      }
-    } else {
-      // Link them together
-      let supersetId = currentWe.superset_id
-      if (!supersetId) {
-        supersetId = crypto.randomUUID()
-        await supabase.from("workout_exercises").update({ superset_id: supersetId }).eq("id", currentWe.id)
-      }
-      await supabase.from("workout_exercises").update({ superset_id: supersetId }).eq("id", nextWe.id)
-
-      setWorkoutExercises(prev => prev.map((we, idx) => {
-        if (we.id === currentWe.id || we.id === nextWe.id) {
-          return { ...we, superset_id: supersetId }
-        }
-        return we
-      }))
-    }
-  }
-
-  async function addSet(workoutExerciseId: string, parentSetNumber?: number) {
-    const targetWe = workoutExercises.find(we => we.id === workoutExerciseId)
-    if (!targetWe) return
-
-    let setNumber = targetWe.workout_sets.length + 1
-    let setType = "normal"
-    let weight = null
-    let reps = 0
-
-    if (parentSetNumber !== undefined) {
-      setNumber = parentSetNumber
-      setType = "dropset"
-      const parentSets = targetWe.workout_sets.filter(s => s.set_number === parentSetNumber)
-      if (parentSets.length > 0) {
-        weight = parentSets[parentSets.length - 1].weight
-        reps = parentSets[parentSets.length - 1].reps
-      }
-    } else {
-      const prevSet = targetWe.workout_sets[targetWe.workout_sets.length - 1]
-      weight = prevSet ? prevSet.weight : null
-      reps = prevSet ? prevSet.reps : 0
-      const maxSet = Math.max(...targetWe.workout_sets.map(s => s.set_number), 0)
-      setNumber = maxSet + 1
-    }
-
-    const { data: newSet, error } = await supabase
-      .from("workout_sets")
-      .insert({
-        workout_exercise_id: workoutExerciseId,
-        set_number: setNumber,
-        set_type: setType,
-        weight,
-        reps,
-      })
-      .select()
-      .single()
-
-    if (!error && newSet) {
-      setWorkoutExercises(prev => prev.map(we => {
-        if (we.id === workoutExerciseId) {
-          return { ...we, workout_sets: [...we.workout_sets, newSet] }
-        }
-        return we
-      }))
-    }
-  }
-
-  async function updateSet(workoutExerciseId: string, setId: string, field: string, value: any) {
-    let numValue = value
-    if (field === "weight" || field === "reps") {
-      numValue = value === "" ? null : Number(value)
-    }
-    
-    setWorkoutExercises(prev => prev.map(we => {
-      if (we.id === workoutExerciseId) {
-        return {
-          ...we,
-          workout_sets: we.workout_sets.map(s => s.id === setId ? { ...s, [field]: numValue } : s)
-        }
-      }
-      return we
-    }))
-
-    await supabase
-      .from("workout_sets")
-      .update({ [field]: numValue })
-      .eq("id", setId)
-  }
-
-  async function removeSet(workoutExerciseId: string, setId: string) {
-    setWorkoutExercises(prev => prev.map(we => {
-      if (we.id === workoutExerciseId) {
-        return {
-          ...we,
-          workout_sets: we.workout_sets.filter(s => s.id !== setId)
-        }
-      }
-      return we
-    }))
-    await supabase.from("workout_sets").delete().eq("id", setId)
+      return newItems
+    })
   }
 
   function handleFinish() {
     startTransition(async () => {
-      const start = new Date(session.created_at).getTime()
-      const end = new Date().getTime()
-      const durationSeconds = Math.floor((end - start) / 1000)
-
-      if (typeof window !== "undefined") {
-        localStorage.removeItem(`workout_ui_${session.id}`)
-      }
+      const durationSeconds = Math.floor((Date.now() - new Date(session.created_at).getTime()) / 1000)
+      localStorage.removeItem(`workout_ui_${session.id}`)
       await finishWorkout(session.id, durationSeconds, feeling, "Completed successfully")
     })
   }
 
   function applyRestTimerConfig() {
-    const parts = customRestInput.split(":")
-    let secs = 150
-    if (parts.length === 2) {
-      secs = parseInt(parts[0]) * 60 + parseInt(parts[1])
-    } else if (parts.length === 1) {
-      secs = parseInt(parts[0]) * 60
-    }
-    if (!isNaN(secs) && secs > 0) {
-      setDefaultRestTime(secs)
+    const [mins, secs] = customRestInput.split(":")
+    const total = Number(mins) * 60 + Number(secs ?? 0)
+    if (!isNaN(total) && total > 0) {
+      setDefaultRestTime(total)
       setIsRestConfigOpen(false)
     }
-  }
-
-  // --- Render ---
-  let filteredExercises = allExercises.filter(e => e.name.toLowerCase().includes(searchQuery.toLowerCase()))
-  
-  if (showTargetedOnly && targetMuscles.length > 0) {
-    filteredExercises = filteredExercises.filter(e => targetMuscles.includes(e.muscle_group))
   }
 
   function formatTime(seconds: number) {
@@ -381,9 +177,9 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
                   </DialogHeader>
                   <div className="py-4 space-y-4">
                     <p className="text-sm text-muted-foreground">Set your default rest period between sets (MM:SS or MM).</p>
-                    <Input 
-                      value={customRestInput} 
-                      onChange={(e) => setCustomRestInput(e.target.value)} 
+                    <Input
+                      value={customRestInput}
+                      onChange={(e) => setCustomRestInput(e.target.value)}
                       placeholder="e.g. 2:30"
                       className="bg-background"
                     />
@@ -400,22 +196,19 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
       </header>
 
       <div className="space-y-6">
-        <DndContext 
+        <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
           modifiers={[restrictToVerticalAxis, restrictToWindowEdges]}
         >
-          <SortableContext 
+          <SortableContext
             items={workoutExercises.map(we => we.id)}
             strategy={verticalListSortingStrategy}
           >
             {workoutExercises.map((we, index) => {
-              const isLinkedToNext = !!(we.superset_id && index < workoutExercises.length - 1 && workoutExercises[index + 1].superset_id === we.superset_id)
-              const isLinkedToPrev = !!(we.superset_id && index > 0 && workoutExercises[index - 1].superset_id === we.superset_id)
-              const hasNext = index < workoutExercises.length - 1
-              const isSupersetFirst = isLinkedToNext && !isLinkedToPrev
-              
+              const { isLinkedToNext, isLinkedToPrev, hasNext, isSupersetFirst } = supersetFlags(workoutExercises, index)
+
               return (
               <div key={we.id} className="relative mt-2">
                 {isSupersetFirst && (
@@ -424,8 +217,8 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
                    </div>
                 )}
                 <div className="relative z-10">
-                  <SortableExercise 
-                    we={we} 
+                  <SortableExercise
+                    we={we}
                     completedSets={completedSets}
                     toggleSetComplete={toggleSetComplete}
                     updateSet={updateSet}
@@ -444,90 +237,9 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
         </DndContext>
       </div>
 
-      <Dialog open={isAddExerciseOpen} onOpenChange={setIsAddExerciseOpen}>
-        <DialogTrigger className="w-full h-12 text-lg font-medium border border-border border-dashed bg-card/50 hover:bg-accent flex items-center justify-center rounded-md">
-          <Plus className="h-5 w-5 mr-2" /> Add Exercise
-        </DialogTrigger>
-        <DialogContent className="max-w-md h-[80vh] flex flex-col p-0 border-border bg-background">
-          <DialogHeader className="p-4 border-b border-border shrink-0">
-            <DialogTitle>Select Exercise</DialogTitle>
-            <Input
-              placeholder="Search exercises..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="mt-4 bg-card border-border"
-            />
-            {targetMuscles.length > 0 && (
-              <div className="flex items-center mt-3 gap-2">
-                <Button 
-                  variant={showTargetedOnly ? "default" : "outline"} 
-                  size="sm" 
-                  onClick={() => setShowTargetedOnly(true)}
-                  className="text-xs h-8"
-                >
-                  Target Muscles ({targetMuscles.join(', ')})
-                </Button>
-                <Button 
-                  variant={!showTargetedOnly ? "default" : "outline"} 
-                  size="sm" 
-                  onClick={() => setShowTargetedOnly(false)}
-                  className="text-xs h-8"
-                >
-                  All
-                </Button>
-              </div>
-            )}
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto p-2">
-            <div className="space-y-1">
-              {filteredExercises.map(ex => (
-                <button
-                  key={ex.id}
-                  onClick={() => addExercise(ex.id)}
-                  className="w-full text-left px-4 py-3 rounded-lg hover:bg-accent/50 transition-colors flex justify-between items-center"
-                >
-                  <div className="flex items-center gap-3">
-                    {ex.image_url ? (
-                      <div className="w-10 h-10 rounded-md bg-muted overflow-hidden shrink-0 flex items-center justify-center">
-                        <img src={ex.image_url} alt={ex.name} className="object-cover w-full h-full mix-blend-screen" />
-                      </div>
-                    ) : (
-                      <div className="w-10 h-10 rounded-md bg-muted shrink-0 flex items-center justify-center">
-                        <span className="text-xs text-muted-foreground">Img</span>
-                      </div>
-                    )}
-                    <div>
-                      <div className="font-medium text-foreground text-sm line-clamp-1">{ex.name}</div>
-                      <div className="text-xs text-muted-foreground">{ex.muscle_group}</div>
-                    </div>
-                  </div>
-                  <Plus className="h-4 w-4 text-muted-foreground shrink-0" />
-                </button>
-              ))}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      {workoutExercises.length > 0 && (
-        <Card className="border-border bg-card mt-8">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base text-center">How did it feel?</CardTitle>
-          </CardHeader>
-          <CardContent className="flex justify-center gap-2">
-            {(["Easy", "Medium", "Hard"] as const).map(f => (
-              <Button
-                key={f}
-                variant={feeling === f ? "default" : "outline"}
-                onClick={() => setFeeling(f)}
-                className={`flex-1 ${feeling === f ? (f === "Easy" ? "bg-primary text-primary-foreground" : f === "Hard" ? "bg-destructive text-destructive-foreground" : "bg-secondary text-secondary-foreground") : "border-border text-muted-foreground"}`}
-              >
-                {f}
-              </Button>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+      <ExercisePicker allExercises={allExercises} targetMuscles={targetMuscles} onPick={addExercise} />
+
+      {workoutExercises.length > 0 && <FeelingSelector value={feeling} onChange={setFeeling} />}
 
       {/* Floating Rest Timer */}
       {restTimeLeft !== null && (
@@ -535,15 +247,15 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
           <div className="flex items-center gap-3 pl-2">
             <Timer className={`w-5 h-5 ${restTimeLeft > 0 ? 'text-primary animate-pulse' : 'text-destructive'}`} />
             <span className="font-mono text-lg font-bold">
-              {restTimeLeft > 0 ? formatTime(restTimeLeft) : "0:00"}
+              {formatTime(restTimeLeft)}
             </span>
           </div>
-          
+
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-xs font-medium" onClick={() => startRestTimer(restTimeLeft + 30)}>
               +30s
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground" onClick={stopRestTimer}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground" onClick={() => setRestEndsAt(null)}>
               <X className="w-4 h-4" />
             </Button>
           </div>

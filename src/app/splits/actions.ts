@@ -1,16 +1,11 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/server"
+import { requireUserAction } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 
 export async function createSplit(formData: FormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Not authenticated")
-  }
+  const { supabase, user } = await requireUserAction()
 
   const name = formData.get("name") as string
   const daysJson = formData.get("days_json") as string
@@ -59,12 +54,7 @@ export async function createSplit(formData: FormData) {
 }
 
 export async function setActiveSplit(splitId: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Not authenticated")
-  }
+  const { supabase, user } = await requireUserAction()
 
   // 1. Set all user's splits to inactive
   await supabase
@@ -84,12 +74,7 @@ export async function setActiveSplit(splitId: string) {
 }
 
 export async function deleteSplit(splitId: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Not authenticated")
-  }
+  const { supabase, user } = await requireUserAction()
 
   await supabase
     .from("splits")
@@ -102,12 +87,7 @@ export async function deleteSplit(splitId: string) {
 }
 
 export async function updateSplitDayTemplate(splitDayId: string, templateId: string | null) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Not authenticated")
-  }
+  const { supabase, user } = await requireUserAction()
 
   // Ensure they own the split day
   const { data: splitDay } = await supabase

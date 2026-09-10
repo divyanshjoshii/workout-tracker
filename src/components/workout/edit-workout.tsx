@@ -1,24 +1,19 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Database } from "@/types/database"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
-import { Check, Plus, Trash2, Calendar, Clock, Save, Trash, Copy, Play } from "lucide-react"
+import { Plus, Trash2, Calendar, Clock, Save, Trash, Copy, Play } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { deleteWorkout } from "@/app/actions"
 import { saveAsTemplate } from "@/app/workout/actions"
 
-type Exercise = Database["public"]["Tables"]["exercises"]["Row"]
-type Session = Database["public"]["Tables"]["workout_sessions"]["Row"]
-type WorkoutSet = Database["public"]["Tables"]["workout_sets"]["Row"]
-type WorkoutExercise = Database["public"]["Tables"]["workout_exercises"]["Row"] & {
-  exercises: Exercise
-  workout_sets: WorkoutSet[]
-}
+import { ExercisePicker } from "./exercise-picker"
+import { FeelingSelector, type Feeling } from "./feeling-selector"
+import { useWorkoutExercises } from "./use-workout-exercises"
+import { supersetFlags, type Exercise, type Session, type WorkoutExercise } from "./types"
 
 interface EditWorkoutProps {
   session: Session
@@ -29,135 +24,20 @@ interface EditWorkoutProps {
 
 export function EditWorkout({ session, initialWorkoutExercises, allExercises, targetMuscles = [] }: EditWorkoutProps) {
   const router = useRouter()
-  const [workoutExercises, setWorkoutExercises] = useState<WorkoutExercise[]>(initialWorkoutExercises)
-  const [isAddExerciseOpen, setIsAddExerciseOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [showTargetedOnly, setShowTargetedOnly] = useState(targetMuscles.length > 0)
+  const {
+    workoutExercises, supabase,
+    addExercise, removeExercise, addSet, updateSet, removeSet, toggleSupersetLink,
+  } = useWorkoutExercises(session.id, initialWorkoutExercises)
+
   const [isPending, startTransition] = useTransition()
   const [templateName, setTemplateName] = useState(session.name + " Template")
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false)
-  
+
   // Session details
   const [name, setName] = useState(session.name)
   const [date, setDate] = useState(session.date)
-  const [durationMinutes, setDurationMinutes] = useState(session.duration_seconds ? Math.round(session.duration_seconds / 60) : "")
-  const [feeling, setFeeling] = useState(session.feeling || "Medium")
-
-  const supabase = createClient()
-
-  // --- Actions ---
-  async function addExercise(exerciseId: string) {
-    const order = workoutExercises.length + 1
-    const { data: newWe, error } = await supabase
-      .from("workout_exercises")
-      .insert({
-        session_id: session.id,
-        exercise_id: exerciseId,
-        exercise_order: order,
-      })
-      .select(`*, exercises(*)`)
-      .single()
-
-    if (!error && newWe) {
-      setWorkoutExercises([...workoutExercises, { ...newWe, workout_sets: [] } as WorkoutExercise])
-      setIsAddExerciseOpen(false)
-    }
-  }
-
-  async function addSet(workoutExerciseId: string) {
-    const targetWe = workoutExercises.find(we => we.id === workoutExerciseId)
-    if (!targetWe) return
-
-    const setNumber = targetWe.workout_sets.length + 1
-    const prevSet = targetWe.workout_sets[targetWe.workout_sets.length - 1]
-    const weight = prevSet ? prevSet.weight : null
-    const reps = prevSet ? prevSet.reps : null
-
-    const { data: newSet, error } = await supabase
-      .from("workout_sets")
-      .insert({
-        workout_exercise_id: workoutExerciseId,
-        set_number: setNumber,
-        weight,
-        reps: reps || 0,
-      })
-      .select()
-      .single()
-
-    if (!error && newSet) {
-      setWorkoutExercises(prev => prev.map(we => {
-        if (we.id === workoutExerciseId) {
-          return { ...we, workout_sets: [...we.workout_sets, newSet] }
-        }
-        return we
-      }))
-    }
-  }
-
-  async function updateSet(workoutExerciseId: string, setId: string, field: "weight" | "reps", value: string) {
-    const numValue = value === "" ? null : Number(value)
-    
-    setWorkoutExercises(prev => prev.map(we => {
-      if (we.id === workoutExerciseId) {
-        return {
-          ...we,
-          workout_sets: we.workout_sets.map(s => s.id === setId ? { ...s, [field]: numValue } : s)
-        }
-      }
-      return we
-    }))
-
-    await supabase
-      .from("workout_sets")
-      .update({ [field]: numValue })
-      .eq("id", setId)
-  }
-
-  async function removeSet(workoutExerciseId: string, setId: string) {
-    setWorkoutExercises(prev => prev.map(we => {
-      if (we.id === workoutExerciseId) {
-        return {
-          ...we,
-          workout_sets: we.workout_sets.filter(s => s.id !== setId)
-        }
-      }
-      return we
-    }))
-
-    await supabase.from("workout_sets").delete().eq("id", setId)
-  }
-
-  async function toggleSupersetLink(currentIndex: number) {
-    const currentWe = workoutExercises[currentIndex]
-    const nextWe = workoutExercises[currentIndex + 1]
-    if (!nextWe) return
-
-    const isLinked = currentWe.superset_id && currentWe.superset_id === nextWe.superset_id
-
-    if (isLinked) {
-      await supabase.from("workout_exercises").update({ superset_id: null }).eq("id", nextWe.id)
-      setWorkoutExercises(prev => prev.map((we, idx) => idx === currentIndex + 1 ? { ...we, superset_id: null } : we))
-
-      const otherLinked = workoutExercises.some((we, idx) => idx !== currentIndex && idx !== currentIndex + 1 && we.superset_id === currentWe.superset_id)
-      if (!otherLinked) {
-        await supabase.from("workout_exercises").update({ superset_id: null }).eq("id", currentWe.id)
-        setWorkoutExercises(prev => prev.map(we => we.id === currentWe.id ? { ...we, superset_id: null } : we))
-      }
-    } else {
-      let supersetId = currentWe.superset_id || crypto.randomUUID()
-      if (!currentWe.superset_id) {
-        await supabase.from("workout_exercises").update({ superset_id: supersetId }).eq("id", currentWe.id)
-      }
-      await supabase.from("workout_exercises").update({ superset_id: supersetId }).eq("id", nextWe.id)
-
-      setWorkoutExercises(prev => prev.map((we, idx) => we.id === currentWe.id || we.id === nextWe.id ? { ...we, superset_id: supersetId } : we))
-    }
-  }
-
-  async function removeExercise(weId: string) {
-    setWorkoutExercises(prev => prev.filter(we => we.id !== weId))
-    await supabase.from("workout_exercises").delete().eq("id", weId)
-  }
+  const [durationMinutes, setDurationMinutes] = useState(session.duration_seconds ? String(Math.round(session.duration_seconds / 60)) : "")
+  const [feeling, setFeeling] = useState<Feeling>((session.feeling as Feeling) || "Medium")
 
   function handleDelete() {
     if (confirm("Are you sure you want to delete this workout? This action cannot be undone.")) {
@@ -183,28 +63,19 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises, ta
 
   function handleSave() {
     startTransition(async () => {
-      const durationSecs = durationMinutes ? Number(durationMinutes) * 60 : null
-      
       await supabase
         .from("workout_sessions")
         .update({
           name,
           date,
           feeling,
-          duration_seconds: durationSecs
+          duration_seconds: durationMinutes ? Number(durationMinutes) * 60 : null
         })
         .eq("id", session.id)
 
       router.push("/progress")
       router.refresh()
     })
-  }
-
-  // --- Render ---
-  let filteredExercises = allExercises.filter(e => e.name.toLowerCase().includes(searchQuery.toLowerCase()))
-  
-  if (showTargetedOnly && targetMuscles.length > 0) {
-    filteredExercises = filteredExercises.filter(e => targetMuscles.includes(e.muscle_group))
   }
 
   return (
@@ -224,7 +95,7 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises, ta
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Template Name</label>
-                  <Input 
+                  <Input
                     value={templateName}
                     onChange={(e) => setTemplateName(e.target.value)}
                     placeholder="e.g., Heavy Pull Day"
@@ -258,28 +129,28 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises, ta
         <CardContent className="pt-6 space-y-4">
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Workout Name</label>
-            <Input 
-              value={name} 
-              onChange={(e) => setName(e.target.value)} 
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               className="bg-background border-border"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center"><Calendar className="w-3 h-3 mr-1" /> Date</label>
-              <Input 
-                type="date" 
-                value={date} 
-                onChange={(e) => setDate(e.target.value)} 
+              <Input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
                 className="bg-background border-border"
               />
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center"><Clock className="w-3 h-3 mr-1" /> Duration (mins)</label>
-              <Input 
-                type="number" 
-                value={durationMinutes} 
-                onChange={(e) => setDurationMinutes(e.target.value)} 
+              <Input
+                type="number"
+                value={durationMinutes}
+                onChange={(e) => setDurationMinutes(e.target.value)}
                 className="bg-background border-border"
                 placeholder="e.g. 45"
               />
@@ -290,10 +161,7 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises, ta
 
       <div className="space-y-6">
         {workoutExercises.map((we, index) => {
-          const isLinkedToNext = !!(we.superset_id && index < workoutExercises.length - 1 && workoutExercises[index + 1].superset_id === we.superset_id)
-          const isLinkedToPrev = !!(we.superset_id && index > 0 && workoutExercises[index - 1].superset_id === we.superset_id)
-          const hasNext = index < workoutExercises.length - 1
-          const isSupersetFirst = isLinkedToNext && !isLinkedToPrev
+          const { isLinkedToNext, isLinkedToPrev, hasNext, isSupersetFirst } = supersetFlags(workoutExercises, index)
 
           return (
           <div key={we.id} className="relative mt-2">
@@ -302,7 +170,7 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises, ta
                  SUPERSET
                </div>
             )}
-            <Card 
+            <Card
               className={`bg-card relative z-10
                 ${isLinkedToNext ? 'rounded-b-none border-b-0' : 'border-border border'}
                 ${isLinkedToPrev ? 'rounded-t-none border-t-0' : 'border-border border'}
@@ -315,9 +183,9 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises, ta
                   <div className="flex items-center gap-2">
                     <span>{we.exercises.name}</span>
                     {hasNext && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className={`h-6 text-[10px] px-2 rounded-full border ${isLinkedToNext ? 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/20' : 'text-muted-foreground border-border hover:text-foreground'}`}
                         onClick={() => toggleSupersetLink(index)}
                       >
@@ -338,7 +206,7 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises, ta
                   <span>Reps</span>
                   <span></span>
                 </div>
-                
+
                 {we.workout_sets
                   .sort((a, b) => a.set_number - b.set_number)
                   .map((set, idx) => (
@@ -370,10 +238,10 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises, ta
                       </Button>
                     </div>
                   ))}
-                
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="w-full mt-2 border-border border-dashed text-muted-foreground hover:text-foreground"
                   onClick={() => addSet(we.id)}
                 >
@@ -386,97 +254,14 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises, ta
         )})}
       </div>
 
-      <Dialog open={isAddExerciseOpen} onOpenChange={setIsAddExerciseOpen}>
-        <DialogTrigger className="w-full h-12 text-lg font-medium border border-border border-dashed bg-card/50 hover:bg-accent flex items-center justify-center rounded-md">
-          <Plus className="h-5 w-5 mr-2" /> Add Exercise
-        </DialogTrigger>
-        <DialogContent className="max-w-md h-[80vh] flex flex-col p-0 border-border bg-background">
-          <DialogHeader className="p-4 border-b border-border shrink-0">
-            <DialogTitle>Select Exercise</DialogTitle>
-            <Input
-              placeholder="Search exercises..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="mt-4 bg-card border-border"
-            />
-            {targetMuscles.length > 0 && (
-              <div className="flex items-center mt-3 gap-2">
-                <Button 
-                  variant={showTargetedOnly ? "default" : "outline"} 
-                  size="sm" 
-                  onClick={() => setShowTargetedOnly(true)}
-                  className="text-xs h-8"
-                >
-                  Target Muscles ({targetMuscles.join(', ')})
-                </Button>
-                <Button 
-                  variant={!showTargetedOnly ? "default" : "outline"} 
-                  size="sm" 
-                  onClick={() => setShowTargetedOnly(false)}
-                  className="text-xs h-8"
-                >
-                  All
-                </Button>
-              </div>
-            )}
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto p-2">
-            <div className="space-y-1">
-              {filteredExercises.map(ex => (
-                <button
-                  key={ex.id}
-                  onClick={() => addExercise(ex.id)}
-                  className="w-full text-left px-4 py-3 rounded-lg hover:bg-accent/50 transition-colors flex justify-between items-center"
-                >
-                  <div className="flex items-center gap-3">
-                    {ex.image_url ? (
-                      <div className="w-10 h-10 rounded-md bg-muted overflow-hidden shrink-0 flex items-center justify-center">
-                        <img src={ex.image_url} alt={ex.name} className="object-cover w-full h-full mix-blend-screen" />
-                      </div>
-                    ) : (
-                      <div className="w-10 h-10 rounded-md bg-muted shrink-0 flex items-center justify-center">
-                        <span className="text-xs text-muted-foreground">Img</span>
-                      </div>
-                    )}
-                    <div>
-                      <div className="font-medium text-foreground text-sm line-clamp-1">{ex.name}</div>
-                      <div className="text-xs text-muted-foreground">{ex.muscle_group}</div>
-                    </div>
-                  </div>
-                  <Plus className="h-4 w-4 text-muted-foreground shrink-0" />
-                </button>
-              ))}
-              {filteredExercises.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">No exercises found.</div>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Workout Feeling Selector */}
-      <Card className="border-border bg-card mt-8">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base text-center">How did it feel?</CardTitle>
-        </CardHeader>
-        <CardContent className="flex justify-center gap-2">
-          {(["Easy", "Medium", "Hard"] as const).map(f => (
-            <Button
-              key={f}
-              variant={feeling === f ? "default" : "outline"}
-              onClick={() => setFeeling(f)}
-              className={`flex-1 ${feeling === f ? (f === "Easy" ? "bg-primary text-primary-foreground" : f === "Hard" ? "bg-destructive text-destructive-foreground" : "bg-secondary text-secondary-foreground") : "border-border text-muted-foreground"}`}
-            >
-              {f}
-            </Button>
-          ))}
-        </CardContent>
-      </Card>
+      <ExercisePicker allExercises={allExercises} targetMuscles={targetMuscles} onPick={addExercise} />
+
+      <FeelingSelector value={feeling} onChange={setFeeling} />
 
       <div className="pt-8">
-        <Button 
-          variant="destructive" 
-          onClick={handleDelete} 
+        <Button
+          variant="destructive"
+          onClick={handleDelete}
           disabled={isPending}
           className="w-full h-12 bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground border border-destructive/20"
         >

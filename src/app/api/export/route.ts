@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
+// RFC 4180: wrap in quotes, double any quote inside.
+const q = (v: unknown) => (v == null || v === "" ? "" : `"${String(v).replace(/"/g, '""')}"`)
+
 export async function GET() {
   try {
     const supabase = await createClient()
@@ -33,7 +36,7 @@ export async function GET() {
 
     sessions.forEach((session) => {
       const date = new Date(session.created_at).toISOString().split('T')[0]
-      const sessionName = `"${session.name.replace(/"/g, '""')}"`
+      const sessionName = q(session.name)
       const duration = session.duration_seconds || ""
       const feeling = session.feeling || ""
 
@@ -49,14 +52,14 @@ export async function GET() {
         sortedSets.forEach((set: any) => {
           // @ts-ignore - Supabase nested joins typing can be tricky
           const exerciseNameStr = set.exercises?.name || "Unknown Exercise"
-          const exerciseName = `"${exerciseNameStr.replace(/"/g, '""')}"`
+          const exerciseName = q(exerciseNameStr)
           
           exerciseSetCounts[exerciseNameStr] = (exerciseSetCounts[exerciseNameStr] || 0) + 1
           const setNum = exerciseSetCounts[exerciseNameStr]
           
           const weight = set.weight_kg || ""
           const reps = set.reps || ""
-          const notes = set.notes ? `"${set.notes.replace(/"/g, '""')}"` : ""
+          const notes = q(set.notes)
 
           csvStr += `${date},${sessionName},${duration},${feeling},${exerciseName},${setNum},${weight},${reps},${notes}\n`
         })
