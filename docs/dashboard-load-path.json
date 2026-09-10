@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Dashboard Load Path",
+    "output": "docs/dashboard-load-path.html",
+    "viewBox": [1040, 560],
+    "column_fit": "spread",
+    "quality_profile": "showcase"
+  },
+  "participants": [
+    { "id": "phone", "type": "external", "label": "Phone", "sublabel": "installed PWA" },
+    { "id": "page", "type": "backend", "label": "Dashboard", "sublabel": "server component" },
+    { "id": "auth", "type": "security", "label": "Supabase Auth", "sublabel": "requireUser" },
+    { "id": "db", "type": "database", "label": "Postgres", "sublabel": "RLS enforced" }
+  ],
+  "segments": [
+    { "from": 150, "to": 235, "label": "Authenticate" },
+    { "from": 245, "to": 305, "label": "Round 1: five queries at once" },
+    { "from": 315, "to": 375, "label": "Round 2: three at once" },
+    { "from": 385, "to": 475, "label": "Round 3 and render" }
+  ],
+  "messages": [
+    { "id": "open", "from": "phone", "to": "page", "y": 165, "label": "open dashboard", "variant": "default" },
+    { "id": "require-user", "from": "page", "to": "auth", "y": 195, "label": "requireUser()", "variant": "security" },
+    { "id": "session", "from": "auth", "to": "page", "y": 225, "label": "session", "variant": "return" },
+    { "id": "round-one", "from": "page", "to": "db", "y": 255, "label": "profile, last workout, weekly count, body weight, active split", "variant": "emphasis" },
+    { "id": "round-one-rows", "from": "db", "to": "page", "y": 288, "label": "five results", "variant": "return" },
+    { "id": "round-two", "from": "page", "to": "db", "y": 325, "label": "split days, hall of fame names, heaviest set per exercise", "variant": "emphasis" },
+    { "id": "round-two-rows", "from": "db", "to": "page", "y": 358, "label": "rows", "variant": "return" },
+    { "id": "round-three", "from": "page", "to": "db", "y": 395, "label": "matching template, only when the split day links one", "variant": "dashed" },
+    { "id": "round-three-rows", "from": "db", "to": "page", "y": 425, "label": "row", "variant": "return" },
+    { "id": "render", "from": "page", "to": "phone", "y": 458, "label": "rendered HTML", "variant": "return" }
+  ],
+  "activations": [
+    { "participant": "page", "from": 190, "to": 464, "type": "backend" },
+    { "participant": "auth", "from": 190, "to": 228, "type": "security" },
+    { "participant": "db", "from": 250, "to": 294, "type": "database" },
+    { "participant": "db", "from": 320, "to": 364, "type": "database" },
+    { "participant": "db", "from": 390, "to": 431, "type": "database" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Why three rounds",
+      "items": [
+        "Round 1 needs nothing but the user id, so all five queries go at once",
+        "Round 2 waits only because it needs the profile and the active split",
+        "Round 3 is skipped entirely when the split day has no linked template"
+      ]
+    },
+    {
+      "dot": "orange",
+      "title": "What this replaced",
+      "items": [
+        "Nine awaits ran one after another, each costing a full round trip",
+        "The editor list of roughly 870 exercises loaded on every render",
+        "Hall of fame pulled every set ever recorded and sorted in JavaScript"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Where the cost still sits",
+      "items": [
+        "Every load is server rendered, so nothing here is cached",
+        "The exercise list now loads when the editor dialog opens",
+        "Each heaviest set is one row, ordered by weight and limited to one"
+      ]
+    }
+  ]
+}

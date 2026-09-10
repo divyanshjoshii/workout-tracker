@@ -9,3 +9,12 @@
 - Decided against changing the stack before the slow load is diagnosed. Reasons
   in `architecture.md`.
 - Handoffs gitignored. The repository is public.
+
+- Diagnosed the 20 second dashboard load. The cause was nine sequential Supabase
+  round trips in `src/app/page.tsx`, plus an 870 row exercise fetch on every
+  render and an unbounded three table join for hall of fame records. Fixed all
+  three. Details and the reasoning are in `architecture.md`.
+- Decided against the bundle size theory for now. It was never needed to explain
+  the delay and remains unmeasured.
+- Added `dashboard-load-path.html` as an interactive sequence diagram of the
+  three query rounds, with its source JSON beside it so it can be regenerated.

@@ -48,3 +48,6 @@ docs/handoffs/
 # Added by code-review-graph
 .code-review-graph/
 .mcp.json
+
+# archify visual-check output (regenerable)
+docs/*.visual-check.*

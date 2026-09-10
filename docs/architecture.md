@@ -44,14 +44,30 @@ would cost weeks while probably carrying the same bug across.
 **Rejected:** Replacing the framework or the database. No evidence yet that
 either is the problem.
 
-**Candidates to check, in rough order of likelihood:**
+### 2026-09-11: what the slow load turned out to be
 
-1. `exercises_v2.sql` seeds roughly 870 exercises. Any page pulling that list
-   client-side without pagination would explain the delay on its own.
-2. Supabase queries running one after another instead of in parallel.
-3. recharts and dnd-kit are both heavy. If they sit in the initial bundle
-   rather than loading lazily, that is a large cost on mobile.
-4. Vercel cold starts, which are real but nowhere near 20 seconds.
+Reading `src/app/page.tsx` settled it. The dashboard is a server component that
+made **nine sequential round trips** to Supabase before rendering anything, with
+no `Promise.all` in the file. Every route is `ƒ` dynamic, so this ran on every
+single load with nothing cached.
 
-None of these is confirmed. Each one still needs measuring before anything
-gets changed on the strength of it.
+Two queries were independently expensive. One pulled all roughly 870 exercises
+on every render to feed an editor dialog that shows 50 at a time and may never
+be opened. The other joined `exercises` to `workout_exercises` to `workout_sets`
+with no limit, pulling every set ever recorded and sorting in JavaScript to find
+one maximum. That second one gets worse the longer the training history is.
+
+**Fixed by:** collapsing the independent queries into `Promise.all`, which took
+nine round trips down to three. The exercise list now loads when the dialog
+opens. Each hall of fame entry asks for its single heaviest set with `order` and
+`limit(1)`.
+
+The bundle-size theory was never tested and remains open. It was not needed to
+explain the delay.
+
+## Load path
+
+`dashboard-load-path.html` in this directory is an interactive sequence diagram
+of the three rounds, showing which queries run together and which have to wait.
+Open it in a browser. `dashboard-load-path.json` is its source, so the diagram
+can be regenerated when the load path changes.
