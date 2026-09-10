@@ -42,3 +42,9 @@ next-env.d.ts
 
 # claude code local dev config
 .claude/
+
+# groundwork session handoffs (public repo)
+docs/handoffs/
+# Added by code-review-graph
+.code-review-graph/
+.mcp.json
