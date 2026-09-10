@@ -4,6 +4,17 @@ import { NextResponse } from "next/server"
 // RFC 4180: wrap in quotes, double any quote inside.
 const q = (v: unknown) => (v == null || v === "" ? "" : `"${String(v).replace(/"/g, '""')}"`)
 
+const HEADER = "Date,Workout Name,Duration (s),Feeling,Exercise Name,Set Number,Weight (kg),Reps,Notes"
+
+// The client is untyped (Database is never handed to createClient), so name the
+// shape the nested select below returns rather than reaching through `any`.
+type ExportSet = { set_number: number; weight: number | null; reps: number | null; notes: string | null }
+type ExportExercise = {
+  exercise_order: number
+  exercises: { name: string } | null
+  workout_sets: ExportSet[] | null
+}
+
 export async function GET() {
   try {
     const supabase = await createClient()
@@ -14,14 +25,20 @@ export async function GET() {
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    // Fetch all workout sessions and their sets
+    // Sets hang off workout_exercises, not off the session directly -- there is
+    // no foreign key from workout_sessions to workout_sets to select through.
     const { data: sessions, error } = await supabase
       .from("workout_sessions")
       .select(`
-        *,
-        workout_sets (
-          *,
-          exercises (name)
+        name,
+        date,
+        duration_seconds,
+        feeling,
+        created_at,
+        workout_exercises (
+          exercise_order,
+          exercises ( name ),
+          workout_sets ( set_number, weight, reps, notes )
         )
       `)
       .eq("user_id", user.id)
@@ -31,46 +48,34 @@ export async function GET() {
       throw error
     }
 
-    // Generate CSV String
-    let csvStr = "Date,Workout Name,Duration (s),Feeling,Exercise Name,Set Number,Weight (kg),Reps,Notes\n"
+    const rows = [HEADER]
 
-    sessions.forEach((session) => {
-      const date = new Date(session.created_at).toISOString().split('T')[0]
-      const sessionName = q(session.name)
-      const duration = session.duration_seconds || ""
-      const feeling = session.feeling || ""
+    for (const session of sessions ?? []) {
+      const base = [session.date, q(session.name), session.duration_seconds ?? "", session.feeling ?? ""]
 
-      if (session.workout_sets && session.workout_sets.length > 0) {
-        // Sort sets by created_at
-        const sortedSets = session.workout_sets.sort((a: any, b: any) => 
-          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        )
+      const exercises = [...((session.workout_exercises ?? []) as unknown as ExportExercise[])].sort(
+        (a, b) => a.exercise_order - b.exercise_order
+      )
 
-        // Group sets by exercise to determine set number
-        const exerciseSetCounts: Record<string, number> = {}
+      let wroteAnySet = false
 
-        sortedSets.forEach((set: any) => {
-          // @ts-ignore - Supabase nested joins typing can be tricky
-          const exerciseNameStr = set.exercises?.name || "Unknown Exercise"
-          const exerciseName = q(exerciseNameStr)
-          
-          exerciseSetCounts[exerciseNameStr] = (exerciseSetCounts[exerciseNameStr] || 0) + 1
-          const setNum = exerciseSetCounts[exerciseNameStr]
-          
-          const weight = set.weight_kg || ""
-          const reps = set.reps || ""
-          const notes = q(set.notes)
+      for (const we of exercises) {
+        const name = q(we.exercises?.name ?? "Unknown Exercise")
+        const sets = [...(we.workout_sets ?? [])].sort((a, b) => a.set_number - b.set_number)
 
-          csvStr += `${date},${sessionName},${duration},${feeling},${exerciseName},${setNum},${weight},${reps},${notes}\n`
-        })
-      } else {
-        // Workout with no sets
-        csvStr += `${date},${sessionName},${duration},${feeling},,,,, \n`
+        for (const set of sets) {
+          rows.push([...base, name, set.set_number, set.weight ?? "", set.reps ?? "", q(set.notes)].join(","))
+          wroteAnySet = true
+        }
       }
-    })
 
-    // Return the CSV file
-    return new NextResponse(csvStr, {
+      // Keep workouts with nothing logged in the export rather than dropping them.
+      if (!wroteAnySet) {
+        rows.push([...base, "", "", "", "", ""].join(","))
+      }
+    }
+
+    return new NextResponse(rows.join("\n") + "\n", {
       headers: {
         "Content-Type": "text/csv",
         "Content-Disposition": `attachment; filename="workout_history_${new Date().toISOString().split('T')[0]}.csv"`,
