@@ -12,6 +12,7 @@ The README covers setup and the directory layout. This file covers the why.
 
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"background": "#0B0F14", "primaryColor": "#151A21", "primaryTextColor": "#F8FAFC", "primaryBorderColor": "#22C55E", "lineColor": "#22C55E", "textColor": "#F8FAFC", "edgeLabelBackground": "#0B0F14"}}}%%
+%% palette 219897bf
 flowchart LR
     open(["Open the app"]) --> dash["Dashboard suggests<br/>the next split day"]
     dash --> start["Start from its<br/>linked template"]

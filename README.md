@@ -38,6 +38,7 @@ Next.js App Router on Vercel, with Supabase for auth and Postgres.
 
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"background": "#0B0F14", "primaryColor": "#151A21", "primaryTextColor": "#F8FAFC", "primaryBorderColor": "#22C55E", "lineColor": "#22C55E", "secondaryColor": "#1E293B", "tertiaryColor": "#0B0F14", "textColor": "#F8FAFC", "edgeLabelBackground": "#0B0F14", "clusterBkg": "#0B0F14", "clusterBorder": "#1E293B", "titleColor": "#F8FAFC"}}}%%
+%% palette 219897bf
 flowchart LR
     subgraph device ["Your phone"]
         PWA["Installed PWA"]

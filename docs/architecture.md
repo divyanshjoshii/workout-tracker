@@ -74,6 +74,7 @@ Every table hangs off `profiles`, and RLS checks ownership through that chain.
 
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"background": "#0B0F14", "primaryColor": "#151A21", "primaryTextColor": "#F8FAFC", "primaryBorderColor": "#22C55E", "lineColor": "#22C55E", "secondaryColor": "#1E293B", "tertiaryColor": "#0B0F14", "textColor": "#F8FAFC", "edgeLabelBackground": "#0B0F14", "attributeBackgroundColorOdd": "#151A21", "attributeBackgroundColorEven": "#0B0F14", "rowOdd": "#151A21", "rowEven": "#0B0F14", "relationColor": "#22C55E", "relationLabelBackground": "#0B0F14", "relationLabelColor": "#F8FAFC"}}}%%
+%% palette 219897bf
 erDiagram
     profiles ||--o{ splits : owns
     profiles ||--o{ workout_sessions : logs
@@ -168,6 +169,7 @@ What happens between opening the dashboard and seeing it. Everything inside a
 
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"actorBkg": "#151A21", "actorBorder": "#22C55E", "actorTextColor": "#F8FAFC", "actorLineColor": "#475569", "signalColor": "#22C55E", "signalTextColor": "#F8FAFC", "labelBoxBkgColor": "#151A21", "labelBoxBorderColor": "#38BDF8", "labelTextColor": "#F8FAFC", "loopTextColor": "#F8FAFC", "noteBkgColor": "#1E293B", "noteTextColor": "#F8FAFC", "noteBorderColor": "#38BDF8", "activationBkgColor": "#22C55E", "activationBorderColor": "#22C55E"}}}%%
+%% palette 219897bf
 sequenceDiagram
     participant P as Phone
     participant D as Dashboard<br/>server component
@@ -224,6 +226,7 @@ A session has no status column. Whether it is finished comes down to one field.
 
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"background": "#0B0F14", "primaryColor": "#151A21", "primaryTextColor": "#F8FAFC", "primaryBorderColor": "#22C55E", "lineColor": "#22C55E", "textColor": "#F8FAFC", "edgeLabelBackground": "#0B0F14"}}}%%
+%% palette 219897bf
 stateDiagram-v2
     state "In progress" as InProgress
     state "Finished" as Finished
