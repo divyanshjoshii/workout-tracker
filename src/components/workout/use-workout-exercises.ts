@@ -1,14 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
-import type { WorkoutExercise } from "./types"
+import type { WorkoutExercise, WorkoutSet } from "./types"
 
 // The active-workout and edit-workout screens differ in chrome, not in what
 // editing an exercise list does, so both drive this.
 export function useWorkoutExercises(sessionId: string, initial: WorkoutExercise[]) {
   const [workoutExercises, setWorkoutExercises] = useState<WorkoutExercise[]>(initial)
   const supabase = createClient()
+
+  // Inserts that haven't landed yet, by set id. A set is shown the moment it is
+  // added, so an edit or delete could otherwise reach the database before the
+  // row it targets exists.
+  const pendingInserts = useRef(new Map<string, PromiseLike<unknown>>())
 
   async function addExercise(exerciseId: string) {
     const { data: newWe, error } = await supabase
@@ -50,22 +55,44 @@ export function useWorkoutExercises(sessionId: string, initial: WorkoutExercise[
       source = targetWe.workout_sets[targetWe.workout_sets.length - 1]
     }
 
-    const { data: newSet, error } = await supabase
-      .from("workout_sets")
-      .insert({
-        workout_exercise_id: workoutExerciseId,
-        set_number: setNumber,
-        set_type: setType,
-        weight: source ? source.weight : null,
-        reps: source ? source.reps : 0,
-      })
-      .select()
-      .single()
-
-    if (error || !newSet) return
+    // Show the row immediately and write it in the background, instead of
+    // waiting a round trip to Seoul before anything appears. The id is made
+    // here so there is nothing to swap in afterwards; the column only falls
+    // back to gen_random_uuid() when no id is given.
+    const newSet: WorkoutSet = {
+      id: crypto.randomUUID(),
+      workout_exercise_id: workoutExerciseId,
+      set_number: setNumber,
+      set_type: setType,
+      weight: source ? source.weight : null,
+      reps: source ? source.reps : 0,
+      rpe: null,
+      notes: null,
+      is_bodyweight: false,
+      created_at: new Date().toISOString(),
+    }
     setWorkoutExercises(prev =>
       prev.map(we => (we.id === workoutExerciseId ? { ...we, workout_sets: [...we.workout_sets, newSet] } : we))
     )
+
+    const insert = supabase.from("workout_sets").insert({
+      id: newSet.id,
+      workout_exercise_id: workoutExerciseId,
+      set_number: setNumber,
+      set_type: setType,
+      weight: newSet.weight,
+      reps: newSet.reps,
+    })
+    pendingInserts.current.set(newSet.id, insert)
+    const { error } = await insert
+    pendingInserts.current.delete(newSet.id)
+
+    // Take it back out if the write was refused.
+    if (error) {
+      setWorkoutExercises(prev =>
+        prev.map(we => (we.id === workoutExerciseId ? { ...we, workout_sets: we.workout_sets.filter(s => s.id !== newSet.id) } : we))
+      )
+    }
   }
 
   async function updateSet(workoutExerciseId: string, setId: string, field: string, value: any) {
@@ -79,6 +106,7 @@ export function useWorkoutExercises(sessionId: string, initial: WorkoutExercise[
       )
     )
 
+    await pendingInserts.current.get(setId)
     await supabase.from("workout_sets").update({ [field]: numValue }).eq("id", setId)
   }
 
@@ -90,6 +118,7 @@ export function useWorkoutExercises(sessionId: string, initial: WorkoutExercise[
           : we
       )
     )
+    await pendingInserts.current.get(setId)
     await supabase.from("workout_sets").delete().eq("id", setId)
   }
 

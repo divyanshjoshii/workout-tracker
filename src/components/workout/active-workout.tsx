@@ -16,16 +16,15 @@ import { SortableExercise } from "./sortable-exercise"
 import { ExercisePicker } from "./exercise-picker"
 import { FeelingSelector, type Feeling } from "./feeling-selector"
 import { useWorkoutExercises } from "./use-workout-exercises"
-import { supersetFlags, type Exercise, type Session, type WorkoutExercise } from "./types"
+import { supersetFlags, type Session, type WorkoutExercise } from "./types"
 
 interface ActiveWorkoutProps {
   session: Session
   initialWorkoutExercises: WorkoutExercise[]
-  allExercises: Exercise[]
   targetMuscles?: string[]
 }
 
-export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, targetMuscles = [] }: ActiveWorkoutProps) {
+export function ActiveWorkout({ session, initialWorkoutExercises, targetMuscles = [] }: ActiveWorkoutProps) {
   const {
     workoutExercises, setWorkoutExercises, supabase,
     addExercise, removeExercise, addSet, updateSet, removeSet, toggleSupersetLink,
@@ -237,7 +236,7 @@ export function ActiveWorkout({ session, initialWorkoutExercises, allExercises, 
         </DndContext>
       </div>
 
-      <ExercisePicker allExercises={allExercises} targetMuscles={targetMuscles} onPick={addExercise} />
+      <ExercisePicker targetMuscles={targetMuscles} onPick={addExercise} />
 
       {workoutExercises.length > 0 && <FeelingSelector value={feeling} onChange={setFeeling} />}
 

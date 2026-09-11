@@ -56,7 +56,7 @@ flowchart LR
     PWA -->|every request| Proxy
     Proxy -->|signed in| Pages
     Proxy -->|form submit| Actions
-    Pages -.->|requireUser| Auth
+    Pages -.->|signing key, cached| Auth
     Pages -->|reads, in parallel| DB
     Actions -->|writes| DB
 

@@ -1,9 +1,8 @@
 "use server"
 
-import { createClient, requireUserAction } from "@/lib/supabase/server"
+import { requireUserAction } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
-import { bestSet } from "@/lib/e1rm"
 
 export async function startWorkout(splitDayId: string | null, formData?: FormData) {
   const { supabase, user } = await requireUserAction()
@@ -178,59 +177,6 @@ export async function startWorkoutFromTemplate(templateId: string, splitDayId?: 
   redirect(`/workout/${session.id}`)
 }
 
-export async function getExerciseHistory(exerciseId: string, currentSessionId?: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { pr: null, lastSession: null }
-
-  // 1. Get all workout_exercises for this user and exercise
-  const { data: weDataRaw } = await supabase
-    .from("workout_exercises")
-    .select(`
-      id,
-      session_id,
-      workout_sessions!inner(user_id, created_at)
-    `)
-    .eq("exercise_id", exerciseId)
-    .eq("workout_sessions.user_id", user.id)
-
-  if (!weDataRaw || weDataRaw.length === 0) return { pr: null, lastSession: null }
-  
-  // Filter out the current session if provided
-  const weData = currentSessionId ? weDataRaw.filter(we => we.session_id !== currentSessionId) : weDataRaw;
-
-  if (weData.length === 0) return { pr: null, lastSession: null }
-
-  const weIds = weData.map(w => w.id)
-
-  // 2. Get PR (max e1rm)
-  const { data: allSets } = await supabase
-    .from("workout_sets")
-    .select("weight, reps")
-    .in("workout_exercise_id", weIds)
-    .not("weight", "is", null)
-
-  const prData = bestSet(allSets ?? [])
-
-  // 3. Get last session data
-  const sortedWe = [...weData].sort((a, b) => {
-    const tA = new Date((a as any).workout_sessions.created_at).getTime()
-    const tB = new Date((b as any).workout_sessions.created_at).getTime()
-    return tB - tA
-  })
-  
-  const lastWeId = sortedWe[0].id
-  const { data: lastSessionSets } = await supabase
-    .from("workout_sets")
-    .select("weight, reps, set_number")
-    .eq("workout_exercise_id", lastWeId)
-    .order("set_number", { ascending: true })
-
-  return {
-    pr: prData,
-    lastSession: lastSessionSets || []
-  }
-}
 
 export async function updateTemplateOrder(updates: { id: string, template_order: number }[]) {
   const { supabase, user } = await requireUserAction()

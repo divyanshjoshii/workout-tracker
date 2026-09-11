@@ -13,16 +13,15 @@ import { saveAsTemplate } from "@/app/workout/actions"
 import { ExercisePicker } from "./exercise-picker"
 import { FeelingSelector, type Feeling } from "./feeling-selector"
 import { useWorkoutExercises } from "./use-workout-exercises"
-import { supersetFlags, type Exercise, type Session, type WorkoutExercise } from "./types"
+import { supersetFlags, type Session, type WorkoutExercise } from "./types"
 
 interface EditWorkoutProps {
   session: Session
   initialWorkoutExercises: WorkoutExercise[]
-  allExercises: Exercise[]
   targetMuscles?: string[]
 }
 
-export function EditWorkout({ session, initialWorkoutExercises, allExercises, targetMuscles = [] }: EditWorkoutProps) {
+export function EditWorkout({ session, initialWorkoutExercises, targetMuscles = [] }: EditWorkoutProps) {
   const router = useRouter()
   const {
     workoutExercises, supabase,
@@ -254,7 +253,7 @@ export function EditWorkout({ session, initialWorkoutExercises, allExercises, ta
         )})}
       </div>
 
-      <ExercisePicker allExercises={allExercises} targetMuscles={targetMuscles} onPick={addExercise} />
+      <ExercisePicker targetMuscles={targetMuscles} onPick={addExercise} />
 
       <FeelingSelector value={feeling} onChange={setFeeling} />
 

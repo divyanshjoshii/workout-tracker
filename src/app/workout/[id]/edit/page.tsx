@@ -1,58 +1,38 @@
 import { requireUser } from "@/lib/supabase/server"
-import { notFound, redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 import { EditWorkout } from "@/components/workout/edit-workout"
 
 export default async function EditWorkoutPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
+  const { id } = await params
   const { supabase, user } = await requireUser()
 
-  // 1. Fetch Session
-  const { data: session } = await supabase
-    .from("workout_sessions")
-    .select("*")
-    .eq("id", resolvedParams.id)
-    .eq("user_id", user.id)
-    .single()
+  // Same shape as the active workout page: both queries need only the id, and
+  // RLS keeps the exercise rows empty for anyone who doesn't own the session.
+  const [{ data: row }, { data: workoutExercises }] = await Promise.all([
+    supabase
+      .from("workout_sessions")
+      .select("*, split_days(target_muscles)")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single(),
+    supabase
+      .from("workout_exercises")
+      .select("*, exercises(*), workout_sets(*)")
+      .eq("session_id", id)
+      .order("exercise_order", { ascending: true }),
+  ])
 
-  if (!session) {
+  if (!row) {
     notFound()
   }
 
-  let targetMuscles: string[] = []
-  if (session.split_day_id) {
-    const { data: splitDay } = await supabase
-      .from("split_days")
-      .select("target_muscles")
-      .eq("id", session.split_day_id)
-      .single()
-    if (splitDay && splitDay.target_muscles) {
-      targetMuscles = splitDay.target_muscles
-    }
-  }
-
-  // 2. Fetch Workout Exercises with Sets
-  const { data: workoutExercises } = await supabase
-    .from("workout_exercises")
-    .select(`
-      *,
-      exercises (*),
-      workout_sets (*)
-    `)
-    .eq("session_id", session.id)
-    .order("exercise_order", { ascending: true })
-
-  // 3. Fetch All Exercises for search/add
-  const { data: allExercises } = await supabase
-    .from("exercises")
-    .select("*")
-    .order("name")
+  const { split_days, ...session } = row
 
   return (
-    <EditWorkout 
-      session={session} 
-      initialWorkoutExercises={workoutExercises as any} 
-      allExercises={allExercises || []} 
-      targetMuscles={targetMuscles}
+    <EditWorkout
+      session={session}
+      initialWorkoutExercises={(workoutExercises as any) || []}
+      targetMuscles={split_days?.target_muscles ?? []}
     />
   )
 }

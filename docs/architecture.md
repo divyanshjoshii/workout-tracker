@@ -65,6 +65,27 @@ opens. Each hall of fame entry asks for its single heaviest set with `order` and
 The bundle-size theory was never tested and remains open. It was not needed to
 explain the delay.
 
+### 2026-09-12: run the functions beside the database, verify sessions locally
+
+**Chose:** Vercel functions in Seoul (`icn1`), the same AWS region as the
+Supabase database (`ap-northeast-2`), and `getClaims()` in place of `getUser()`
+in the proxy and `requireUser()`.
+
+**Because:** Vercel runs new projects in Washington D.C. With the database in
+Seoul, every sequential query crossed the Pacific, and the proxy and each page
+then made two more round trips to Supabase Auth to find out who the user was.
+The project signs sessions with an ES256 key, so `getClaims()` can check the
+signature on the server against a public key it caches.
+
+**Trade-off:** a session revoked on Supabase's side still gets through the app's
+page checks until its access token expires, at most an hour. Data access is
+unaffected, because the browser already queries Supabase with that same token
+and RLS checks it on every request.
+
+**Rejected:** moving the database to Mumbai, closer to the phone. That would mean
+a new Supabase project and a data migration, where the region change is one
+line of config.
+
 <!-- Diagram colours come from src/app/globals.css and the app icon. Keep them in sync. -->
 
 ## Data model
@@ -173,13 +194,11 @@ What happens between opening the dashboard and seeing it. Everything inside a
 sequenceDiagram
     participant P as Phone
     participant D as Dashboard<br/>server component
-    participant A as Supabase Auth
     participant DB as Postgres<br/>RLS enforced
 
     rect rgb(21, 26, 33)
         P->>D: open dashboard
-        D->>A: requireUser()
-        A-->>D: session
+        Note over D: requireUser() checks the session<br/>signature here, no network call
     end
 
     rect rgb(16, 36, 26)

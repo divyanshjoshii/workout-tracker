@@ -32,16 +32,24 @@ export async function createClient() {
 // Every page and action starts by resolving the signed-in user. The proxy already
 // bounces anonymous requests to /login, so these only ever trip on an expired
 // session mid-request -- but they also narrow `user` away from null for callers.
-export async function requireUser() {
+// getClaims() verifies the session locally against the project's ES256 key, so
+// resolving the user no longer costs a round trip to Supabase Auth on every page
+// and action. Callers only ever read id and email.
+async function signedInUser() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data } = await supabase.auth.getClaims()
+  const user = data?.claims ? { id: data.claims.sub, email: data.claims.email } : null
+  return { supabase, user }
+}
+
+export async function requireUser() {
+  const { supabase, user } = await signedInUser()
   if (!user) redirect("/login")
   return { supabase, user }
 }
 
 export async function requireUserAction() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await signedInUser()
   if (!user) throw new Error("Not authenticated")
   return { supabase, user }
 }

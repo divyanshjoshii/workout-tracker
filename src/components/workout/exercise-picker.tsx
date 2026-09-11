@@ -1,27 +1,65 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
-import type { Exercise } from "./types"
+
+// The table holds around 870 exercises. The workout pages used to fetch every
+// column of every row up front to feed this dialog -- about 840 KB per page
+// load, most of it instructions text that is never shown here. Search on the
+// server instead and bring back one screenful.
+const LIMIT = 50
+
+type PickerExercise = { id: string; name: string; muscle_group: string; image_url: string | null }
 
 interface ExercisePickerProps {
-  allExercises: Exercise[]
   targetMuscles?: string[]
   onPick: (exerciseId: string) => void | Promise<unknown>
 }
 
-export function ExercisePicker({ allExercises, targetMuscles = [], onPick }: ExercisePickerProps) {
+export function ExercisePicker({ targetMuscles = [], onPick }: ExercisePickerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [showTargetedOnly, setShowTargetedOnly] = useState(targetMuscles.length > 0)
+  const [results, setResults] = useState<PickerExercise[]>([])
+  const [loading, setLoading] = useState(false)
 
-  let filteredExercises = allExercises.filter(e => e.name.toLowerCase().includes(searchQuery.toLowerCase()))
-  if (showTargetedOnly && targetMuscles.length > 0) {
-    filteredExercises = filteredExercises.filter(e => targetMuscles.includes(e.muscle_group))
-  }
+  // Keyed on a string, not the array: the parent re-renders every second for
+  // the workout clock, and a defaulted [] is a new array each time, which would
+  // re-run the search on every tick while the dialog is open.
+  const targetKey = targetMuscles.join("|")
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    let stale = false
+    const timer = setTimeout(async () => {
+      setLoading(true)
+
+      let query = createClient()
+        .from("exercises")
+        .select("id, name, muscle_group, image_url")
+        .order("name")
+        .limit(LIMIT)
+
+      const term = searchQuery.trim()
+      if (term) query = query.ilike("name", `%${term}%`)
+      if (showTargetedOnly && targetKey) query = query.in("muscle_group", targetKey.split("|"))
+
+      const { data } = await query
+      if (stale) return
+      setResults(data ?? [])
+      setLoading(false)
+    }, 200)
+
+    return () => {
+      stale = true
+      clearTimeout(timer)
+    }
+  }, [isOpen, searchQuery, showTargetedOnly, targetKey])
 
   async function pick(exerciseId: string) {
     await onPick(exerciseId)
@@ -65,7 +103,7 @@ export function ExercisePicker({ allExercises, targetMuscles = [], onPick }: Exe
         </DialogHeader>
         <div className="flex-1 overflow-y-auto p-2">
           <div className="space-y-1">
-            {filteredExercises.map(ex => (
+            {results.map(ex => (
               <button
                 key={ex.id}
                 onClick={() => pick(ex.id)}
@@ -74,7 +112,7 @@ export function ExercisePicker({ allExercises, targetMuscles = [], onPick }: Exe
                 <div className="flex items-center gap-3">
                   {ex.image_url ? (
                     <div className="w-10 h-10 rounded-md bg-muted overflow-hidden shrink-0 flex items-center justify-center">
-                      <img src={ex.image_url} alt={ex.name} className="object-cover w-full h-full mix-blend-screen" />
+                      <img src={ex.image_url} alt={ex.name} loading="lazy" decoding="async" className="object-cover w-full h-full mix-blend-screen" />
                     </div>
                   ) : (
                     <div className="w-10 h-10 rounded-md bg-muted shrink-0 flex items-center justify-center">
@@ -89,8 +127,15 @@ export function ExercisePicker({ allExercises, targetMuscles = [], onPick }: Exe
                 <Plus className="h-4 w-4 text-muted-foreground shrink-0" />
               </button>
             ))}
-            {filteredExercises.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">No exercises found.</div>
+            {results.length === LIMIT && (
+              <div className="text-center py-3 text-xs text-muted-foreground">
+                Showing the first {LIMIT}. Keep typing to narrow it down.
+              </div>
+            )}
+            {results.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                {loading ? "Searching..." : "No exercises found."}
+              </div>
             )}
           </div>
         </div>

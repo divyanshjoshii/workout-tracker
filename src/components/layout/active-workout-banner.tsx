@@ -18,18 +18,22 @@ export function ActiveWorkoutBanner() {
   const isWorkoutRoute = pathname?.startsWith("/workout/") || pathname === "/workout"
 
   useEffect(() => {
-    async function checkActiveWorkout() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+    // Nobody is signed in on the login page, so there is nothing to find.
+    if (pathname === "/login") return
 
+    // RLS already limits this to the signed-in user's sessions, so there is no
+    // need to look the user up first. That lookup was a round trip to Supabase
+    // Auth on every navigation.
+    async function checkActiveWorkout() {
       const { data, error } = await supabase
         .from("workout_sessions")
         .select("id, name, created_at")
-        .eq("user_id", user.id)
         .is("duration_seconds", null)
         .order("created_at", { ascending: false })
         .limit(1)
-        .single()
+        // No workout in progress is the usual case, not an error. .single()
+        // answered it with a 406 on every navigation.
+        .maybeSingle()
 
       if (!error && data) {
         setActiveSessionId(data.id)

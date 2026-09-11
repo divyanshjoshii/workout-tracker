@@ -28,12 +28,16 @@ export async function updateSession(request: NextRequest) {
   )
 
   // IMPORTANT: Avoid writing any logic between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
+  // supabase.auth.getClaims(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  //
+  // getClaims() checks the session's signature on this server against the
+  // project's published ES256 key, cached across requests. getUser() made a
+  // round trip to Supabase Auth instead, on every navigation, prefetch and
+  // server action. getClaims() still refreshes an expired token, and RLS still
+  // verifies the JWT on every query.
+  const { data } = await supabase.auth.getClaims()
+  const user = data?.claims
 
   if (!user && !request.nextUrl.pathname.startsWith('/login')) {
     // no user, potentially respond by redirecting the user to the login page

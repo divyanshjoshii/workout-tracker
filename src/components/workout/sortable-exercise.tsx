@@ -7,9 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check, Plus, Trash2, GripVertical, FileText, Weight } from "lucide-react"
-import { getExerciseHistory } from "@/app/workout/actions"
+import { createClient } from "@/lib/supabase/client"
+import { bestSet } from "@/lib/e1rm"
 
 import type { WorkoutExercise } from "./types"
+
+type HistorySet = { weight: number | null; reps: number; set_number: number }
+type HistoryRow = { workout_sessions: { created_at: string }; workout_sets: HistorySet[] | null }
 
 interface SortableExerciseProps {
   we: WorkoutExercise
@@ -41,15 +45,29 @@ export function SortableExercise({
     position: "relative" as const,
   }
 
+  // Read straight from Supabase in the browser rather than through a server
+  // action. Next runs server actions one at a time, so one history call per
+  // card queued up in front of every button press on this screen. RLS limits
+  // the rows to this user's own workouts.
   useEffect(() => {
-    // Fetch PR and last session data for this exercise
-    async function fetchHistory() {
-      const history = await getExerciseHistory(we.exercises.id, we.session_id)
-      if (history.pr) setPr(history.pr as any)
-      if (history.lastSession) setLastSessionSets(history.lastSession)
+    let stale = false
+    createClient()
+      .from("workout_exercises")
+      .select("session_id, workout_sessions!inner(created_at), workout_sets(weight, reps, set_number)")
+      .eq("exercise_id", we.exercises.id)
+      .neq("session_id", we.session_id)
+      .then(({ data }) => {
+        const rows = (data ?? []) as unknown as HistoryRow[]
+        if (stale || rows.length === 0) return
+        setPr(bestSet(rows.flatMap(row => row.workout_sets ?? [])))
+        const last = rows.reduce((a, b) =>
+          new Date(b.workout_sessions.created_at) > new Date(a.workout_sessions.created_at) ? b : a)
+        setLastSessionSets([...(last.workout_sets ?? [])].sort((a, b) => a.set_number - b.set_number))
+      })
+    return () => {
+      stale = true
     }
-    fetchHistory()
-  }, [we.exercises.id])
+  }, [we.exercises.id, we.session_id])
 
   return (
     <Card 

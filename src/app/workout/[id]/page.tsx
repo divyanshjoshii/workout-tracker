@@ -3,56 +3,38 @@ import { redirect } from "next/navigation"
 import { ActiveWorkout } from "@/components/workout/active-workout"
 
 export default async function WorkoutSessionPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
+  const { id } = await params
   const { supabase, user } = await requireUser()
 
-  // Fetch the session
-  const { data: session } = await supabase
-    .from("workout_sessions")
-    .select("*")
-    .eq("id", resolvedParams.id)
-    .eq("user_id", user.id)
-    .single()
+  // Both queries need only the id from the URL, so they run together. The
+  // exercise rows are safe to start before ownership is confirmed: RLS on
+  // workout_exercises returns nothing for a session that isn't this user's, and
+  // the page bails out below before rendering anything if the session is missing.
+  const [{ data: row }, { data: workoutExercises }] = await Promise.all([
+    supabase
+      .from("workout_sessions")
+      .select("*, split_days(target_muscles)")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single(),
+    supabase
+      .from("workout_exercises")
+      .select("*, exercises(*), workout_sets(*)")
+      .eq("session_id", id)
+      .order("exercise_order", { ascending: true }),
+  ])
 
-  if (!session) {
+  if (!row) {
     redirect("/workout")
   }
 
-  let targetMuscles: string[] = []
-  if (session.split_day_id) {
-    const { data: splitDay } = await supabase
-      .from("split_days")
-      .select("target_muscles")
-      .eq("id", session.split_day_id)
-      .single()
-    if (splitDay && splitDay.target_muscles) {
-      targetMuscles = splitDay.target_muscles
-    }
-  }
-
-  // Fetch existing workout exercises with their sets
-  const { data: workoutExercises } = await supabase
-    .from("workout_exercises")
-    .select(`
-      *,
-      exercises (*),
-      workout_sets (*)
-    `)
-    .eq("session_id", session.id)
-    .order("exercise_order", { ascending: true })
-
-  // Fetch all exercises for the selection dialog
-  const { data: allExercises } = await supabase
-    .from("exercises")
-    .select("*")
-    .order("name", { ascending: true })
+  const { split_days, ...session } = row
 
   return (
-    <ActiveWorkout 
-      session={session} 
-      initialWorkoutExercises={(workoutExercises as any) || []} 
-      allExercises={allExercises || []} 
-      targetMuscles={targetMuscles}
+    <ActiveWorkout
+      session={session}
+      initialWorkoutExercises={(workoutExercises as any) || []}
+      targetMuscles={split_days?.target_muscles ?? []}
     />
   )
 }
