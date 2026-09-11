@@ -8,6 +8,25 @@ strength progression.
 
 The README covers setup and the directory layout. This file covers the why.
 
+## A normal session
+
+```mermaid
+%%{init: {"theme": "base", "themeVariables": {"background": "#0B0F14", "primaryColor": "#151A21", "primaryTextColor": "#F8FAFC", "primaryBorderColor": "#22C55E", "lineColor": "#22C55E", "textColor": "#F8FAFC", "edgeLabelBackground": "#0B0F14"}}}%%
+flowchart LR
+    open(["Open the app"]) --> dash["Dashboard suggests<br/>the next split day"]
+    dash --> start["Start from its<br/>linked template"]
+    start --> log["Log sets<br/>supersets, dropsets,<br/>rest timer"]
+    log --> finish["Finish"]
+    finish --> prog["Progress charts and<br/>hall of fame pick up<br/>the new sets"]
+
+    classDef entry fill:#0E1E2C,stroke:#38BDF8,color:#F8FAFC
+    classDef step fill:#151A21,stroke:#22C55E,color:#F8FAFC
+    classDef payoff fill:#2A2410,stroke:#EAB308,color:#F8FAFC
+    class open entry
+    class dash,start,log,finish step
+    class prog payoff
+```
+
 ## Who it is for
 
 One person, for now. There is no team and no plan for other users yet, so

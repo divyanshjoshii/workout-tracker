@@ -20,6 +20,9 @@ real data yet.
 
 ## Done
 
+- README and docs rebuilt around themed Mermaid diagrams: architecture, data
+  model, load path, workout lifecycle and a normal session, all in the app's
+  own colours, plus stack badges and callouts
 - Dashboard load: nine sequential Supabase round trips cut to three, the 870 row
   exercise fetch moved behind the editor dialog, and the unbounded set join
   replaced with one row per hall of fame entry
@@ -30,4 +33,5 @@ real data yet.
 
 ## Blocked
 
-Nothing.
+- The old archify files, `docs/dashboard-load-path.html` and its `.json`, are
+  no longer linked from anywhere. Deleting them needs an explicit yes.

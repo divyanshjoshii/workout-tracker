@@ -18,3 +18,9 @@
   the delay and remains unmeasured.
 - Added `dashboard-load-path.html` as an interactive sequence diagram of the
   three query rounds, with its source JSON beside it so it can be regenerated.
+- Moved every repository diagram to Mermaid so GitHub draws it, with colours
+  taken from `src/app/globals.css` and the app icon. Each diagram paints its own
+  dark surfaces so it reads in both GitHub themes. The archify HTML is no longer
+  linked, because GitHub shows an HTML file as source rather than a picture.
+- Rebuilt the README around the logo, stack badges, a feature table, the
+  architecture diagram, and callouts for RLS and the SQL setup order.
