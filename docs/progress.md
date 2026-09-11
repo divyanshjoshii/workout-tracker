@@ -33,5 +33,4 @@ real data yet.
 
 ## Blocked
 
-- The old archify files, `docs/dashboard-load-path.html` and its `.json`, are
-  no longer linked from anywhere. Deleting them needs an explicit yes.
+Nothing.

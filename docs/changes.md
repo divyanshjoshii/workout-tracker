@@ -24,3 +24,5 @@
   linked, because GitHub shows an HTML file as source rather than a picture.
 - Rebuilt the README around the logo, stack badges, a feature table, the
   architecture diagram, and callouts for RLS and the SQL setup order.
+- Deleted `dashboard-load-path.html` and its source JSON, with an explicit yes.
+  The Mermaid sequence diagram in `architecture.md` covers the same ground.
