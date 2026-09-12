@@ -1,39 +1,38 @@
 # Progress
 
-_Updated: 2026-09-12_
+_Updated: 2026-09-13_
 
 ## Now
 
-Second speed round done: a service worker so the app opens on the phone's copy of
-the home screen, full prefetch for the main tabs, and less JavaScript at startup.
-It takes effect on the next deploy. The signed-in home screen path has not been
-checked on a phone yet, since only the signed-out paths could be tested locally.
+Set edits save the value you typed last. Fast typing used to send one write per
+key, and those could land in any order. Adding a set and editing it straight
+away could also make it vanish from the screen, or bring back one you had just
+deleted. It takes effect on the next deploy.
 
 ## Next
 
-1. After the deploy, on the phone: open the app, close it, and open it again. The
-   first open installs the service worker. From the second, the home screen
-   should appear at once and update a moment later. Home, Workout, Progress and
-   Settings should open without the grey skeleton; Exercises still shows it
-   briefly.
-2. If not done yet, run `migration_performance.sql`, saving
-   `select * from pg_policies where schemaname = 'public'` first.
-3. `@ducanh2912/next-pwa` is no longer imported anywhere and can be uninstalled.
-   Removing a dependency waits for an explicit yes.
-4. Set edits send one write per keystroke, and those writes can land out of
-   order, so fast typing can leave an earlier value saved. It's a correctness
-   bug, left out of the speed work.
-5. The hall of fame editor loads all 873 exercises into the browser when its
+1. After the deploy, on the phone: in a workout, add a set, type its weight and
+   reps quickly, then reload. Both values and the set should still be there.
+   Delete a set right after adding it, reload, and it should stay gone.
+2. Find out whether `migration_performance.sql` has run. The eight indexes it
+   creates show up in `pg_indexes` if it has. Save
+   `select * from pg_policies where schemaname = 'public'` before running it.
+3. The hall of fame editor loads all 873 exercises into the browser when its
    dialog opens, which `standards.md` says to avoid.
-6. The heaviest pages are now exercise detail (362 KB gzipped) and Progress
+4. The heaviest pages are now exercise detail (362 KB gzipped) and Progress
    (321 KB), both because recharts loads with them. Loading the charts on demand
    would be the next cut.
 
 ## Done
 
+- Set edits: writes to a set go out one at a time, keys typed while one is on
+  its way are merged into the next, and a new set's insert is sent once, not
+  again on every keystroke
+- Removed `@ducanh2912/next-pwa`, which nothing imported
 - Speed, second round: a service worker serving the home screen from the phone,
   full prefetch for the main tabs, the Supabase library off Home's startup, and
-  the Exercises and Progress payloads cut
+  the Exercises and Progress payloads cut. Confirmed on the phone: the home
+  screen appears at once from the second open.
 - Speed: functions moved beside the database in Seoul, sessions verified locally
   instead of over the network, workout history taken off the server action
   queue, a loading skeleton on every route, instant Add Set, and indexes plus

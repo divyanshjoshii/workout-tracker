@@ -114,3 +114,27 @@
 - The Exercises screen selects the five columns it displays, taking its data from
   838 KB to 124 KB. The Progress screen searches on the server as you type, where
   it used to download all 873 exercises on every visit.
+
+## 2026-09-13
+
+- The owner confirmed on the phone that the service worker round works: from the
+  second open, the home screen appears at once.
+- Fixed set edits saving the wrong value. Each keystroke in a weight or reps box
+  sent its own update straight away, so the updates could land in any order and
+  the last to land was saved. Typing 120 could save 1. Writes to one set now go
+  out one at a time, and keys typed while one is on its way are merged into the
+  next, so a burst of typing sends one or two updates instead of one per key.
+- Reproducing that turned up a second bug. Supabase queries are lazy and send
+  again every time they are awaited, so waiting for a new set's insert re-sent
+  the insert on every keystroke. If a copy landed first, the original failed as
+  a duplicate and Add Set took the set off the screen while it stayed in the
+  database. A re-sent insert landing after a delete also put the set back. Each
+  write is now awaited once.
+- There is no test framework, so the repro was a throwaway script: the real hook
+  compiled with the project's TypeScript, a fake Supabase client that re-sends
+  on every await like the real one, and random latency on a virtual clock.
+  Before the fix, 125 of 500 runs saved the wrong weight and 396 of 500 runs
+  that edited a new set went wrong. After it, none of 2000 did, with latency up
+  to 0.8 seconds each way.
+- Uninstalled `@ducanh2912/next-pwa`, which nothing imported. The lockfile lost
+  219 packages and no other package changed version.

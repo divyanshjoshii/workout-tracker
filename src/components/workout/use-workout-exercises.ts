@@ -10,10 +10,22 @@ export function useWorkoutExercises(sessionId: string, initial: WorkoutExercise[
   const [workoutExercises, setWorkoutExercises] = useState<WorkoutExercise[]>(initial)
   const supabase = createClient()
 
-  // Inserts that haven't landed yet, by set id. A set is shown the moment it is
-  // added, so an edit or delete could otherwise reach the database before the
-  // row it targets exists.
-  const pendingInserts = useRef(new Map<string, PromiseLike<unknown>>())
+  // Writes to one set go out one at a time, in the order they were made. Sent
+  // together they can land in any order, and whichever lands last is what's
+  // saved. It also keeps an edit or delete from reaching the database before
+  // the insert of a set that was only just added.
+  const setWrites = useRef(new Map<string, Promise<unknown>>())
+  function queueSetWrite<T>(setId: string, write: () => PromiseLike<T>): Promise<T> {
+    // Supabase queries are lazy and send again on every await, so each one is
+    // awaited exactly once, here.
+    const next = (setWrites.current.get(setId) ?? Promise.resolve()).catch(() => {}).then(write)
+    setWrites.current.set(setId, next)
+    return next
+  }
+
+  // Fields typed while an update for that set is still queued. Later keystrokes
+  // overwrite these, so a burst of typing sends one update, not one per key.
+  const unsentFields = useRef(new Map<string, Record<string, unknown>>())
 
   async function addExercise(exerciseId: string) {
     const { data: newWe, error } = await supabase
@@ -75,17 +87,16 @@ export function useWorkoutExercises(sessionId: string, initial: WorkoutExercise[
       prev.map(we => (we.id === workoutExerciseId ? { ...we, workout_sets: [...we.workout_sets, newSet] } : we))
     )
 
-    const insert = supabase.from("workout_sets").insert({
-      id: newSet.id,
-      workout_exercise_id: workoutExerciseId,
-      set_number: setNumber,
-      set_type: setType,
-      weight: newSet.weight,
-      reps: newSet.reps,
-    })
-    pendingInserts.current.set(newSet.id, insert)
-    const { error } = await insert
-    pendingInserts.current.delete(newSet.id)
+    const { error } = await queueSetWrite(newSet.id, () =>
+      supabase.from("workout_sets").insert({
+        id: newSet.id,
+        workout_exercise_id: workoutExerciseId,
+        set_number: setNumber,
+        set_type: setType,
+        weight: newSet.weight,
+        reps: newSet.reps,
+      })
+    )
 
     // Take it back out if the write was refused.
     if (error) {
@@ -106,8 +117,18 @@ export function useWorkoutExercises(sessionId: string, initial: WorkoutExercise[
       )
     )
 
-    await pendingInserts.current.get(setId)
-    await supabase.from("workout_sets").update({ [field]: numValue }).eq("id", setId)
+    const unsent = unsentFields.current.get(setId)
+    if (unsent) {
+      unsent[field] = numValue
+      return
+    }
+    const fields = { [field]: numValue }
+    unsentFields.current.set(setId, fields)
+    await queueSetWrite(setId, () => {
+      // Anything typed from here on goes in the next update.
+      unsentFields.current.delete(setId)
+      return supabase.from("workout_sets").update(fields).eq("id", setId)
+    })
   }
 
   async function removeSet(workoutExerciseId: string, setId: string) {
@@ -118,8 +139,7 @@ export function useWorkoutExercises(sessionId: string, initial: WorkoutExercise[
           : we
       )
     )
-    await pendingInserts.current.get(setId)
-    await supabase.from("workout_sets").delete().eq("id", setId)
+    await queueSetWrite(setId, () => supabase.from("workout_sets").delete().eq("id", setId))
   }
 
   // Links an exercise to the one below it, or breaks that link.
