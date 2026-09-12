@@ -13,6 +13,13 @@ const navItems = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
+// Tapping a tab should need no network, so these are fully prefetched, data
+// included. Next keeps a full prefetch for five minutes, and any server action
+// that changes data clears it. Exercises is left on the default: its favourite
+// stars save straight to Supabase, which wouldn't clear the prefetched copy, so
+// a star could come back stale. It still shows its skeleton at once.
+const FULLY_PREFETCHED = new Set(["/", "/workout", "/progress", "/settings"]);
+
 export function BottomNav() {
   const pathname = usePathname();
 
@@ -30,6 +37,7 @@ export function BottomNav() {
             <Link
               key={item.name}
               href={item.href}
+              prefetch={FULLY_PREFETCHED.has(item.href) || null}
               className={cn(
                 "flex flex-col items-center justify-center w-full h-full space-y-1 text-muted-foreground hover:text-primary transition-colors",
                 isActive && "text-primary"

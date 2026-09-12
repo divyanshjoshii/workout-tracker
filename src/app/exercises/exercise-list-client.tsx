@@ -7,7 +7,7 @@ import { FavoriteButton } from "@/components/exercises/favorite-button"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 
-type Exercise = Database["public"]["Tables"]["exercises"]["Row"]
+type Exercise = Pick<Database["public"]["Tables"]["exercises"]["Row"], "id" | "name" | "muscle_group" | "category" | "equipment">
 
 interface ExerciseListClientProps {
   initialExercises: Exercise[]

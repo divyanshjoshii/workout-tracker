@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { ActiveWorkoutBanner } from "@/components/layout/active-workout-banner";
+import { ServiceWorker } from "@/components/service-worker";
 
 // Inter font is a modern clean sans-serif often used in gym-tech
 const inter = Inter({
@@ -44,6 +45,7 @@ export default function RootLayout({
         </main>
         <ActiveWorkoutBanner />
         <BottomNav />
+        <ServiceWorker />
       </body>
     </html>
   );

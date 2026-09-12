@@ -8,10 +8,10 @@ import { Activity, Calendar, Search, Dumbbell } from "lucide-react"
 import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
-import { createClient } from "@/lib/supabase/client"
 
 type Session = Database["public"]["Tables"]["workout_sessions"]["Row"]
 type WeightEntry = Database["public"]["Tables"]["body_weight_entries"]["Row"]
+type SearchResult = { id: string; name: string; muscle_group: string; image_url: string | null }
 
 interface ProgressClientProps {
   sessions: Session[]
@@ -21,16 +21,33 @@ interface ProgressClientProps {
 
 export function ProgressClient({ sessions, weightEntries, weeklyExercises }: ProgressClientProps) {
   const [searchQuery, setSearchQuery] = useState("")
-  const [allExercises, setAllExercises] = useState<any[]>([])
-  const supabase = createClient()
+  const [results, setResults] = useState<SearchResult[]>([])
+  const [searching, setSearching] = useState(false)
 
+  // Searched on the server as you type, 50 rows at a time. This screen used to
+  // download all 873 exercises on every visit in case a search happened.
   useEffect(() => {
-    async function fetchExercises() {
-      const { data } = await supabase.from("exercises").select("id, name, muscle_group, image_url").order("name")
-      if (data) setAllExercises(data)
+    const term = searchQuery.trim()
+    if (!term) return
+    let stale = false
+    const timer = setTimeout(async () => {
+      setSearching(true)
+      const { createClient } = await import("@/lib/supabase/client")
+      const { data } = await createClient()
+        .from("exercises")
+        .select("id, name, muscle_group, image_url")
+        .ilike("name", `%${term}%`)
+        .order("name")
+        .limit(50)
+      if (stale) return
+      setResults(data ?? [])
+      setSearching(false)
+    }, 200)
+    return () => {
+      stale = true
+      clearTimeout(timer)
     }
-    fetchExercises()
-  }, [supabase])
+  }, [searchQuery])
 
   // Format data for chart
   const chartData = weightEntries
@@ -56,9 +73,7 @@ export function ProgressClient({ sessions, weightEntries, weeklyExercises }: Pro
   })
   const uniqueWeekly = Array.from(weeklyExerciseMap.values())
 
-  const searchedExercises = searchQuery.trim().length > 0 
-    ? allExercises.filter(e => e.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    : []
+  const searchedExercises = searchQuery.trim() ? results : []
 
   return (
     <Tabs defaultValue="overview" className="space-y-6">
@@ -174,7 +189,7 @@ export function ProgressClient({ sessions, weightEntries, weeklyExercises }: Pro
               </Link>
             ))}
             {searchedExercises.length === 0 && (
-              <div className="text-sm text-muted-foreground text-center py-8">No exercises found.</div>
+              <div className="text-sm text-muted-foreground text-center py-8">{searching ? "Searching..." : "No exercises found."}</div>
             )}
           </div>
         ) : (

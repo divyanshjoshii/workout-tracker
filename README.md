@@ -42,6 +42,7 @@ Next.js App Router on Vercel, with Supabase for auth and Postgres.
 flowchart LR
     subgraph device ["Your phone"]
         PWA["Installed PWA"]
+        SW["Service worker"]
     end
     subgraph vercel ["Vercel"]
         Proxy["proxy.ts<br/>sends signed out users to /login"]
@@ -53,7 +54,9 @@ flowchart LR
         DB[("Postgres<br/>RLS on every table")]
     end
 
-    PWA -->|every request| Proxy
+    PWA -->|every request| SW
+    SW -->|saved home screen| PWA
+    SW -->|everything else| Proxy
     Proxy -->|signed in| Pages
     Proxy -->|form submit| Actions
     Pages -.->|signing key, cached| Auth
@@ -64,7 +67,7 @@ flowchart LR
     classDef server fill:#10241A,stroke:#22C55E,color:#F8FAFC
     classDef auth fill:#2A1020,stroke:#EC4899,color:#F8FAFC
     classDef db fill:#1C162E,stroke:#8B5CF6,color:#F8FAFC
-    class PWA phone
+    class PWA,SW phone
     class Proxy,Pages,Actions server
     class Auth auth
     class DB db
@@ -111,6 +114,7 @@ npm install && npm run dev
 | `src/components/ui/` | shadcn primitives. |
 | `src/lib/supabase/` | Browser, server, and proxy clients. `requireUser()` / `requireUserAction()` resolve the signed-in user. |
 | `src/proxy.ts` | Redirects anonymous requests to `/login` before any page renders. |
+| `public/sw.js` | Service worker. Keeps the build files on the phone and serves the last home screen while a fresh one loads. |
 
 ## Docs
 

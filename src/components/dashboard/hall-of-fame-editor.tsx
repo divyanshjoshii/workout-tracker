@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { updateHallOfFame } from "@/app/actions"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -19,10 +18,13 @@ export function HallOfFameEditor({ currentSelections }: { currentSelections: str
   const [isPending, setIsPending] = useState(false)
 
   // Loaded when the dialog opens instead of on every dashboard render. The table
-  // holds around 870 rows and this list shows at most 50 of them.
+  // holds around 870 rows and this list shows at most 50 of them. The Supabase
+  // library is imported here as well, which keeps it out of the home screen's
+  // startup JavaScript.
   async function loadExercises() {
     if (exercises.length > 0 || loading) return
     setLoading(true)
+    const { createClient } = await import("@/lib/supabase/client")
     const { data } = await createClient()
       .from("exercises")
       .select("id, name, muscle_group")

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
 import { Timer, ArrowRight } from "lucide-react"
 
 export function ActiveWorkoutBanner() {
@@ -12,7 +11,6 @@ export function ActiveWorkoutBanner() {
   const [sessionName, setSessionName] = useState<string>("")
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0)
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null)
-  const supabase = createClient()
 
   // Hide banner if we are currently on the active workout page
   const isWorkoutRoute = pathname?.startsWith("/workout/") || pathname === "/workout"
@@ -21,11 +19,17 @@ export function ActiveWorkoutBanner() {
     // Nobody is signed in on the login page, so there is nothing to find.
     if (pathname === "/login") return
 
+    let stale = false
+
     // RLS already limits this to the signed-in user's sessions, so there is no
     // need to look the user up first. That lookup was a round trip to Supabase
     // Auth on every navigation.
     async function checkActiveWorkout() {
-      const { data, error } = await supabase
+      // Imported here rather than at the top: this banner sits in the root
+      // layout, so a top-level import put the Supabase library into every
+      // page's startup JavaScript.
+      const { createClient } = await import("@/lib/supabase/client")
+      const { data, error } = await createClient()
         .from("workout_sessions")
         .select("id, name, created_at")
         .is("duration_seconds", null)
@@ -35,6 +39,7 @@ export function ActiveWorkoutBanner() {
         // answered it with a 406 on every navigation.
         .maybeSingle()
 
+      if (stale) return
       if (!error && data) {
         setActiveSessionId(data.id)
         setSessionName(data.name)
@@ -45,7 +50,10 @@ export function ActiveWorkoutBanner() {
     }
 
     checkActiveWorkout()
-  }, [supabase, pathname])
+    return () => {
+      stale = true
+    }
+  }, [pathname])
 
   useEffect(() => {
     if (!sessionStartTime) return

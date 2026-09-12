@@ -4,7 +4,7 @@ import { Database } from "@/types/database"
 import Link from "next/link"
 import { Dumbbell } from "lucide-react"
 
-type Exercise = Database["public"]["Tables"]["exercises"]["Row"]
+type Exercise = Pick<Database["public"]["Tables"]["exercises"]["Row"], "id" | "name" | "muscle_group" | "category" | "equipment">
 
 interface ExerciseCardProps {
   exercise: Exercise

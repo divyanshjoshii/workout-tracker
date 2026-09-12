@@ -9,7 +9,7 @@
 | Styling | Tailwind and shadcn | Component primitives without a heavy UI library |
 | Charts | recharts | Strength progression graphs |
 | Drag and drop | dnd-kit | Template arrangement |
-| Offline | `@ducanh2912/next-pwa` | Installable on a phone |
+| Offline | Web app manifest, and a hand-written service worker in `public/sw.js` | Installable, and opens on the phone's saved copy of the home screen |
 
 ## Shape
 
@@ -85,6 +85,30 @@ and RLS checks it on every request.
 **Rejected:** moving the database to Mumbai, closer to the phone. That would mean
 a new Supabase project and a data migration, where the region change is one
 line of config.
+
+### 2026-09-12: open on the phone's copy of the home screen
+
+**Chose:** a hand-written service worker that serves the home screen from the
+phone and refreshes it in the background, full prefetch for the bottom-nav tabs
+other than Exercises, and the Supabase library loaded on demand wherever a page
+doesn't need it at startup.
+
+**Because:** after the region fix, every open still waited on the network before
+anything appeared. Reaching Vercel's Mumbai edge alone took 0.1 to 0.36 seconds,
+then the page came from Seoul, then the phone ran about 1 MB of JavaScript. A
+copy on the device is the only way the first screen can appear without that wait.
+
+**Trade-off:** the home screen can show the previous visit's numbers for a moment
+before current data arrives. After a deploy, the first open shows the old version
+until Next notices the build changed and reloads. The saved home screen holds the
+signed-in user's data on the phone until they sign out or the login page loads.
+
+**Rejected:** Serwist, which Next's PWA guide says still needs webpack. A
+persisted client-side data cache for every screen, such as TanStack Query, which
+means a new dependency and a rewrite of each page; kept in reserve in case this
+is not enough. Caching every route in the service worker: Next's page data
+requests vary with router state, and a cached workout screen would hide edits
+made since.
 
 <!-- Diagram colours come from src/app/globals.css and the app icon. Keep them in sync. -->
 

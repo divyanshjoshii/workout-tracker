@@ -7,7 +7,9 @@ export default async function ExercisesPage() {
   // Fetch all exercises
   const { data: exercises } = await supabase
     .from("exercises")
-    .select("*")
+    // Only what the list shows. select("*") also sent every exercise's
+    // instructions, most of the payload, which this screen never displays.
+    .select("id, name, muscle_group, category, equipment")
     .order("name")
 
   // Fetch user's favorite exercises

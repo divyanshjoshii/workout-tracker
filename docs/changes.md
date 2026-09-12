@@ -88,3 +88,29 @@
 - Decided against caching dynamic pages in the client router (`staleTimes`).
   Workout edits go from the browser to Supabase without telling Next, so a
   cached page would show stale sets after going away and coming back.
+- Opening the app still took about two seconds after the region fix, so measured
+  again. Reaching Vercel's Mumbai edge took 0.1 to 0.36 seconds before any work
+  began, and every page then had the phone run about 1 MB of JavaScript. With no
+  service worker, nothing was ever served from the phone.
+- Added a hand-written service worker in `public/sw.js`, the approach in Next's
+  PWA guide, since next-pwa and Serwist both need webpack. It keeps the
+  content-hashed build files on the phone and serves the home screen from its
+  last copy while a fresh one downloads. `src/components/service-worker.tsx`
+  registers it and then asks the server for current data. Only full loads of `/`
+  are cached. Page data requests, other routes and anything from Supabase go to
+  the network, and the saved copy is dropped on sign out and when the login page
+  loads.
+- Removed the `@ducanh2912/next-pwa` wrapper from `next.config.ts`. It never ran
+  under Turbopack, and a webpack build would have overwritten `public/sw.js` with
+  its own. The package is still listed in `package.json`.
+- The bottom nav fully prefetches Home, Workout, Progress and Settings, so their
+  data is already on the phone when the tab is tapped. Next keeps a full prefetch
+  for five minutes and drops it when a server action revalidates. Exercises keeps
+  the default, because its favourite stars save straight to Supabase and would
+  leave a prefetched copy stale.
+- The workout banner and the hall of fame editor now import the Supabase library
+  when they first need it. Home's startup JavaScript went from 294 KB to 233 KB
+  gzipped, and login, settings and the workout list each dropped about 60 KB.
+- The Exercises screen selects the five columns it displays, taking its data from
+  838 KB to 124 KB. The Progress screen searches on the server as you type, where
+  it used to download all 873 exercises on every visit.
