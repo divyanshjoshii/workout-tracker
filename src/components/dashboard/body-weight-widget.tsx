@@ -1,11 +1,11 @@
 "use client"
 
-import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState, useTransition } from "react"
+import { Plus } from "lucide-react"
 import { logBodyWeight } from "@/app/actions"
 
 interface BodyWeightWidgetProps {
@@ -34,46 +34,41 @@ export function BodyWeightWidget({ latestWeight }: BodyWeightWidgetProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger className="text-left">
-        <Card className="border-border bg-card hover:bg-accent/50 transition-colors cursor-pointer h-full">
-          <CardContent className="p-4 flex flex-col justify-between h-full">
-            <div className="text-sm font-medium text-muted-foreground mb-4">Body Weight</div>
-            <div>
-              <div className="text-2xl font-bold text-secondary">
-                {latestWeight ? `${latestWeight} kg` : "--"}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {latestWeight ? "Latest entry" : "Tap to log"}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <DialogTrigger className="tile press slide-fill group relative flex h-full flex-col bg-sky p-4 text-left text-sky-foreground [--slide:color-mix(in_oklab,var(--sky),var(--foreground)_6%)]">
+        <span className="font-display text-base">Body weight</span>
+        <span className="mt-3 flex items-baseline gap-1">
+          <span className="font-display text-stat tabular-nums">{latestWeight ?? "--"}</span>
+          {latestWeight && <span className="text-sm font-bold">kg</span>}
+        </span>
+        <span className="mt-auto flex items-center gap-1 pt-3 text-xs font-bold">
+          <Plus className="size-3.5 transition-transform duration-500 ease-spring group-hover:rotate-90" />
+          Log weight
+        </span>
       </DialogTrigger>
-      
-      <DialogContent className="max-w-xs rounded-xl bg-background border-border">
+
+      <DialogContent className="max-w-xs">
         <DialogHeader>
-          <DialogTitle>Log Body Weight</DialogTitle>
+          <DialogTitle>Log body weight</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-          <div className="space-y-2">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="weight">Weight (kg)</Label>
-            <Input 
-              id="weight" 
-              name="weight" 
-              type="number" 
+            <Input
+              id="weight"
+              name="weight"
+              type="number"
               step="0.1"
-              placeholder="e.g. 75.5" 
-              required 
+              placeholder="e.g. 75.5"
+              required
               defaultValue={latestWeight || ""}
-              className="bg-card border-border"
               autoFocus
             />
           </div>
-          
-          {error && <div className="text-sm text-destructive">{error}</div>}
-          
-          <Button type="submit" className="w-full" disabled={isPending}>
-            {isPending ? "Saving..." : "Save Entry"}
+
+          {error && <p className="text-sm font-bold text-destructive">{error}</p>}
+
+          <Button type="submit" size="lg" className="w-full" disabled={isPending}>
+            {isPending ? "Saving..." : "Save entry"}
           </Button>
         </form>
       </DialogContent>

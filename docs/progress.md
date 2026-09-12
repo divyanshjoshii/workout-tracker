@@ -4,27 +4,37 @@ _Updated: 2026-09-13_
 
 ## Now
 
-Set edits save the value you typed last. Fast typing used to send one write per
-key, and those could land in any order. Adding a set and editing it straight
-away could also make it vanish from the screen, or bring back one you had just
-deleted. It takes effect on the next deploy.
+The whole app has a new look: pink gingham, puffy widget tiles, rounded
+Japanese display type and an original kitty mascot who watches the pointer.
+Every screen was redone, but only the login page could be checked here. The
+signed-in screens have only been built and type-checked, not seen.
 
 ## Next
 
-1. After the deploy, on the phone: in a workout, add a set, type its weight and
-   reps quickly, then reload. Both values and the set should still be there.
-   Delete a set right after adding it, reload, and it should stay gone.
-2. Find out whether `migration_performance.sql` has run. The eight indexes it
+1. On the phone, go through every tab: Home, Workout (start one, log a set, rest
+   timer, finish), Exercises and an exercise's detail, Progress, Splits and a
+   new split, Settings. Note anything that looks off.
+2. The new app icon only shows once the app is removed from the home screen and
+   added again.
+3. Also on the phone: in a workout, add a set, type its weight and reps quickly,
+   then reload. Both values and the set should still be there.
+4. Find out whether `migration_performance.sql` has run. The eight indexes it
    creates show up in `pg_indexes` if it has. Save
    `select * from pg_policies where schemaname = 'public'` before running it.
-3. The hall of fame editor loads all 873 exercises into the browser when its
+5. The Mermaid diagrams in the README and `docs/` still use the old dark green
+   palette. `architecture.md` says to keep them in step with `globals.css`.
+6. The hall of fame editor loads all 873 exercises into the browser when its
    dialog opens, which `standards.md` says to avoid.
-4. The heaviest pages are now exercise detail (362 KB gzipped) and Progress
-   (321 KB), both because recharts loads with them. Loading the charts on demand
+7. The heaviest pages are exercise detail (365 KB gzipped) and Progress
+   (324 KB), both because recharts loads with them. Loading the charts on demand
    would be the next cut.
 
 ## Done
 
+- Redesign: strawberry-milk palette with a berry night theme, Mochiy Pop One and
+  Zen Maru Gothic, a kitty mascot in four poses who follows the pointer and
+  relaxes when it's over her, a sliding dock, spring presses and slide-in hover
+  fills, and new app icons
 - Set edits: writes to a set go out one at a time, keys typed while one is on
   its way are merged into the next, and a new set's insert is sent once, not
   again on every keystroke

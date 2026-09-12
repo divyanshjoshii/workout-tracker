@@ -1,4 +1,3 @@
-import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Database } from "@/types/database"
 import Link from "next/link"
@@ -13,35 +12,22 @@ interface ExerciseCardProps {
 
 export function ExerciseCard({ exercise, actionSlot }: ExerciseCardProps) {
   return (
-    <Card className="overflow-hidden border-border bg-card shadow-sm transition-all hover:border-primary/50">
-      <div className="flex items-start justify-between p-4">
-        <Link href={`/exercises/${exercise.id}`} className="flex-1 space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-lg line-clamp-1">{exercise.name}</h3>
-          </div>
-          
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
-              {exercise.muscle_group}
-            </Badge>
-            <Badge variant="outline" className="text-muted-foreground border-border">
-              {exercise.category}
-            </Badge>
-          </div>
-          
+    <div className="tile flex items-center gap-2 p-1.5 pr-2.5 transition-[transform,border-color] duration-300 ease-spring hover:-translate-y-0.5 hover:border-input">
+      <Link href={`/exercises/${exercise.id}`} className="press min-w-0 flex-1 rounded-[1.35rem] p-2.5">
+        <h3 className="line-clamp-1 text-base font-bold">{exercise.name}</h3>
+
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <Badge variant="secondary">{exercise.muscle_group}</Badge>
+          <Badge variant="outline">{exercise.category}</Badge>
           {exercise.equipment && (
-            <div className="flex items-center text-xs text-muted-foreground mt-2">
-              <Dumbbell className="w-3 h-3 mr-1" />
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-muted-foreground">
+              <Dumbbell className="size-3.5" />
               {exercise.equipment}
-            </div>
+            </span>
           )}
-        </Link>
-        {actionSlot && (
-          <div className="ml-2 pl-2 border-l border-border/50">
-            {actionSlot}
-          </div>
-        )}
-      </div>
-    </Card>
+        </div>
+      </Link>
+      {actionSlot}
+    </div>
   )
 }

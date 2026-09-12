@@ -4,10 +4,13 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts"
 import { Database } from "@/types/database"
-import { Activity, Calendar, Search, Dumbbell } from "lucide-react"
+import { Activity, ChevronRight, Search, Dumbbell } from "lucide-react"
 import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
+import { KittyLoaf } from "@/components/kitty/kitty"
+import { CalendarLeaf } from "@/components/layout/calendar-leaf"
+import { cn } from "@/lib/utils"
 
 type Session = Database["public"]["Tables"]["workout_sessions"]["Row"]
 type WeightEntry = Database["public"]["Tables"]["body_weight_entries"]["Row"]
@@ -76,33 +79,39 @@ export function ProgressClient({ sessions, weightEntries, weeklyExercises }: Pro
   const searchedExercises = searchQuery.trim() ? results : []
 
   return (
-    <Tabs defaultValue="overview" className="space-y-6">
+    <Tabs defaultValue="overview" className="gap-5">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="exercises">Exercises</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="overview" className="space-y-6">
+      <TabsContent value="overview" className="flex flex-col gap-6">
         {/* Body Weight Chart */}
-        <Card className="border-border bg-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Body Weight History</CardTitle>
+        <Card>
+          <CardHeader>
+            <CardTitle>Body weight</CardTitle>
+            <p className="text-sm font-bold text-muted-foreground">Your last 30 entries</p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-2">
             {chartData.length > 1 ? (
-              <div className="h-48 w-full mt-4">
+              <div className="h-48 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                    <XAxis dataKey="date" stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
-                    <YAxis stroke="#888" fontSize={12} tickLine={false} axisLine={false} domain={['dataMin - 2', 'dataMax + 2']} />
-                    <Tooltip contentStyle={{ backgroundColor: '#0B0F14', borderColor: '#1F2937', borderRadius: '8px' }} itemStyle={{ color: '#22C55E' }} />
-                    <Line type="monotone" dataKey="weight" stroke="#22C55E" strokeWidth={3} dot={{ r: 4, fill: "#22C55E", strokeWidth: 0 }} activeDot={{ r: 6, fill: "#38BDF8" }} />
+                  <LineChart data={chartData} margin={{ top: 5, right: 12, bottom: 5, left: -20 }}>
+                    <CartesianGrid strokeDasharray="4 6" stroke="var(--border)" vertical={false} />
+                    <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} domain={['dataMin - 2', 'dataMax + 2']} />
+                    <Tooltip
+                      cursor={{ stroke: 'var(--input)', strokeWidth: 2 }}
+                      contentStyle={{ backgroundColor: 'var(--popover)', border: '2px solid var(--border)', borderRadius: '16px', color: 'var(--foreground)', fontWeight: 700 }}
+                      itemStyle={{ color: 'var(--sky-foreground)' }}
+                    />
+                    <Line type="monotone" dataKey="weight" stroke="var(--chart-2)" strokeWidth={3.5} strokeLinecap="round" dot={{ r: 4.5, fill: "var(--card)", stroke: "var(--chart-2)", strokeWidth: 2.5 }} activeDot={{ r: 7, fill: "var(--sky)", stroke: "var(--chart-2)", strokeWidth: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="text-sm text-muted-foreground py-8 text-center">
+              <div className="flex flex-col items-center gap-2 px-4 py-6 text-center text-sm font-bold text-muted-foreground">
+                <KittyLoaf className="w-24" />
                 Log your body weight at least twice to see your progress chart.
               </div>
             )}
@@ -110,128 +119,124 @@ export function ProgressClient({ sessions, weightEntries, weeklyExercises }: Pro
         </Card>
 
         {/* Workout History */}
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight mb-3">Recent Workouts</h2>
-          <div className="space-y-3">
+        <section>
+          <h2 className="font-display text-heading">Recent workouts</h2>
+          <div className="mt-3 flex flex-col gap-2.5">
             {sessions.length > 0 ? (
               sessions.map(session => (
-                <Link key={session.id} href={`/workout/${session.id}/edit`} className="block">
-                  <Card className="border-border bg-card/50 hover:bg-card transition-colors cursor-pointer">
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div>
-                        <div className="font-semibold text-foreground">{session.name}</div>
-                        <div className="flex items-center text-xs text-muted-foreground mt-1">
-                          <Calendar className="w-3 h-3 mr-1" />
-                          {new Date(session.date + 'T12:00:00Z').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        {session.feeling && (
-                          <div className={`text-xs font-medium px-2 py-1 rounded-md inline-block ${
-                            session.feeling === 'Easy' ? 'bg-primary/20 text-primary' :
-                            session.feeling === 'Hard' ? 'bg-destructive/20 text-destructive' :
-                            'bg-secondary/20 text-secondary'
-                          }`}>
-                            {session.feeling}
-                          </div>
-                        )}
-                        {session.duration_seconds && (
-                          <div className="text-xs text-muted-foreground mt-1 flex items-center justify-end">
-                            <Activity className="w-3 h-3 mr-1" />
-                            {Math.round(session.duration_seconds / 60)} min
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                <Link key={session.id} href={`/workout/${session.id}/edit`} className="tile press group flex items-center gap-3 p-3 pr-4">
+                  <CalendarLeaf date={session.date} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-bold">{session.name}</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-bold text-muted-foreground">
+                      <span>{new Date(session.date + 'T12:00:00Z').toLocaleDateString(undefined, { weekday: 'long', timeZone: 'UTC' })}</span>
+                      {session.duration_seconds && (
+                        <span className="inline-flex items-center gap-1">
+                          <Activity className="size-3.5" />
+                          {Math.round(session.duration_seconds / 60)} min
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {session.feeling && (
+                    <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-xs font-bold", FEELING_TONE[session.feeling] ?? "bg-muted text-muted-foreground")}>
+                      {session.feeling}
+                    </span>
+                  )}
+                  <ChevronRight className="size-5 shrink-0 text-muted-foreground transition-transform duration-300 ease-spring group-hover:translate-x-1" />
                 </Link>
               ))
             ) : (
-              <div className="text-sm text-muted-foreground py-8 text-center border border-dashed border-border rounded-lg">
+              <div className="tile flex flex-col items-center gap-2 p-6 text-center text-sm font-bold text-muted-foreground">
+                <KittyLoaf className="w-24" />
                 No workouts recorded yet.
               </div>
             )}
           </div>
-        </div>
+        </section>
       </TabsContent>
 
-      <TabsContent value="exercises" className="space-y-6">
+      <TabsContent value="exercises" className="flex flex-col gap-5">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search all exercises..." 
-            className="pl-9 bg-card border-border"
+          <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search all exercises..."
+            aria-label="Search all exercises"
+            className="bg-card pl-10"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
         {searchQuery.trim().length > 0 ? (
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Search Results</h3>
-            {searchedExercises.map(ex => (
-              <Link key={ex.id} href={`/exercises/${ex.id}`} className="block">
-                <Card className="border-border bg-card/50 hover:bg-card transition-colors">
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-md bg-muted overflow-hidden shrink-0 flex items-center justify-center">
-                      {ex.image_url ? (
-                        <img src={ex.image_url} alt={ex.name} className="object-cover w-full h-full mix-blend-screen" />
-                      ) : (
-                        <Dumbbell className="w-5 h-5 text-muted-foreground opacity-50" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="font-medium text-sm">{ex.name}</div>
-                      <div className="text-xs text-muted-foreground">{ex.muscle_group}</div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-            {searchedExercises.length === 0 && (
-              <div className="text-sm text-muted-foreground text-center py-8">{searching ? "Searching..." : "No exercises found."}</div>
-            )}
-          </div>
+          <section>
+            <h2 className="font-display text-heading">Search results</h2>
+            <div className="mt-3 flex flex-col gap-2">
+              {searchedExercises.map(ex => (
+                <Link key={ex.id} href={`/exercises/${ex.id}`} className="tile press group flex items-center gap-3 p-2.5 pr-4">
+                  <ExerciseThumb src={ex.image_url} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-bold">{ex.name}</div>
+                    <div className="text-xs font-bold text-muted-foreground">{ex.muscle_group}</div>
+                  </div>
+                  <ChevronRight className="size-5 shrink-0 text-muted-foreground transition-transform duration-300 ease-spring group-hover:translate-x-1" />
+                </Link>
+              ))}
+              {searchedExercises.length === 0 && (
+                <div className="py-8 text-center text-sm font-bold text-muted-foreground">{searching ? "Searching..." : "No exercises found."}</div>
+              )}
+            </div>
+          </section>
         ) : (
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Performed This Week</h3>
-            {uniqueWeekly.length > 0 ? (
-              uniqueWeekly.map(item => (
-                <Link key={item.exercise.id} href={`/exercises/${item.exercise.id}`} className="block">
-                  <Card className="border-border bg-card/50 hover:bg-card transition-colors">
-                    <CardContent className="p-3 flex flex-col gap-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-md bg-muted overflow-hidden shrink-0 flex items-center justify-center">
-                          {item.exercise.image_url ? (
-                            <img src={item.exercise.image_url} alt={item.exercise.name} className="object-cover w-full h-full mix-blend-screen" />
-                          ) : (
-                            <Dumbbell className="w-5 h-5 text-muted-foreground opacity-50" />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">{item.exercise.name}</div>
-                          <div className="text-xs text-muted-foreground">{item.exercise.muscle_group}</div>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-1 mt-1 pl-13">
+          <section>
+            <h2 className="font-display text-heading">Performed this week</h2>
+            <div className="mt-3 flex flex-col gap-2">
+              {uniqueWeekly.length > 0 ? (
+                uniqueWeekly.map(item => (
+                  <Link key={item.exercise.id} href={`/exercises/${item.exercise.id}`} className="tile press group flex items-center gap-3 p-2.5 pr-4">
+                    <ExerciseThumb src={item.exercise.image_url} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-bold">{item.exercise.name}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1">
+                        <span className="text-xs font-bold text-muted-foreground">{item.exercise.muscle_group}</span>
                         {Array.from(item.splitDayNames as Set<string>).map(splitName => (
-                          <span key={splitName} className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                          <span key={splitName} className="rounded-full bg-primary px-2 py-0.5 text-[0.6875rem] font-bold text-primary-foreground">
                             {splitName}
                           </span>
                         ))}
                       </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))
-            ) : (
-              <div className="text-sm text-muted-foreground text-center py-8 border border-dashed border-border rounded-lg bg-card/50">
-                You haven't performed any exercises in the last 7 days.
-              </div>
-            )}
-          </div>
+                    </div>
+                    <ChevronRight className="size-5 shrink-0 text-muted-foreground transition-transform duration-300 ease-spring group-hover:translate-x-1" />
+                  </Link>
+                ))
+              ) : (
+                <div className="tile flex flex-col items-center gap-2 p-6 text-center text-sm font-bold text-muted-foreground">
+                  <KittyLoaf className="w-24" />
+                  You haven&apos;t performed any exercises in the last 7 days.
+                </div>
+              )}
+            </div>
+          </section>
         )}
       </TabsContent>
     </Tabs>
+  )
+}
+
+const FEELING_TONE: Record<string, string> = {
+  Easy: "bg-mint text-mint-foreground",
+  Medium: "bg-butter text-butter-foreground",
+  Hard: "bg-primary text-primary-foreground",
+}
+
+function ExerciseThumb({ src }: { src: string | null }) {
+  return (
+    <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl border-2 border-border bg-white">
+      {src ? (
+        <img src={src} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
+      ) : (
+        <Dumbbell className="size-5 text-muted-foreground" />
+      )}
+    </span>
   )
 }

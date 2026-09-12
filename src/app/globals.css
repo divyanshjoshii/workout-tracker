@@ -2,96 +2,326 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/*
+  Strawberry milk. The app is a phone home screen of kawaii widgets: puffy
+  white tiles with a blush keyline and a soft bottom lip on a pink gingham
+  ground, bow pink with sky, butter and mint as tile fills, plum-cocoa ink,
+  Mochiy Pop One for titles and numbers, Zen Maru Gothic for everything else,
+  and an original white kitty. Night follows the phone and swaps the ground
+  to berry plum. Direction seed 724c393b.
+*/
+
+@custom-variant dark (@media (prefers-color-scheme: dark));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-strawberry: var(--strawberry);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-sky: var(--sky);
+  --color-sky-foreground: var(--sky-foreground);
+  --color-butter: var(--butter);
+  --color-butter-foreground: var(--butter-foreground);
+  --color-mint: var(--mint);
+  --color-mint-foreground: var(--mint-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-lip: var(--lip);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --font-sans: var(--font-zen-maru), ui-rounded, system-ui, sans-serif;
+  --font-display: var(--font-mochiy), var(--font-zen-maru), ui-rounded, system-ui, sans-serif;
+  --font-heading: var(--font-display);
+
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) * 1.25);
+  --radius-2xl: calc(var(--radius) * 1.5);
+  --radius-3xl: calc(var(--radius) * 1.75);
+  --radius-4xl: calc(var(--radius) * 2.5);
 }
 
-:root, .dark {
-  --background: #0B0F14;
-  --foreground: #F8FAFC;
-  --card: #151A21;
-  --card-foreground: #F8FAFC;
-  --popover: #151A21;
-  --popover-foreground: #F8FAFC;
-  --primary: #22C55E;
-  --primary-foreground: #0B0F14;
-  --secondary: #38BDF8;
-  --secondary-foreground: #0B0F14;
-  --muted: #1E293B;
-  --muted-foreground: #94A3B8;
-  --accent: #1E293B;
-  --accent-foreground: #F8FAFC;
-  --destructive: #EF4444;
-  --destructive-foreground: #F8FAFC;
-  --border: #1E293B;
-  --input: #1E293B;
-  --ring: #22C55E;
-  --chart-1: #22C55E;
-  --chart-2: #38BDF8;
-  --chart-3: #F59E0B;
-  --chart-4: #8B5CF6;
-  --chart-5: #EC4899;
-  --radius: 0.75rem;
-  --sidebar-background: #0B0F14;
-  --sidebar-foreground: #F8FAFC;
-  --sidebar-primary: #22C55E;
-  --sidebar-primary-foreground: #0B0F14;
-  --sidebar-accent: #1E293B;
-  --sidebar-accent-foreground: #F8FAFC;
-  --sidebar-border: #1E293B;
-  --sidebar-ring: #22C55E;
+@theme {
+  --text-clock: 3.25rem;
+  --text-clock--line-height: 1;
+  --text-clock--letter-spacing: -0.02em;
+  --text-title: 1.75rem;
+  --text-title--line-height: 1.15;
+  --text-title--letter-spacing: -0.01em;
+  --text-heading: 1.1875rem;
+  --text-heading--line-height: 1.25;
+  --text-stat: 2.25rem;
+  --text-stat--line-height: 1;
+
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --animate-blink: blink 4.8s infinite;
+  --animate-sway: sway 3.2s ease-in-out infinite;
+  --animate-hop: hop 560ms var(--ease-spring);
+  --animate-heart: heart 900ms var(--ease-out-expo) forwards;
+  --animate-tick: tick 2s steps(1) infinite;
+  --animate-doze: doze 2.8s ease-in-out infinite;
+
+  @keyframes blink {
+    0%, 92%, 100% { transform: scaleY(1); }
+    95% { transform: scaleY(0.1); }
+  }
+  @keyframes sway {
+    0%, 100% { transform: rotate(-6deg); }
+    50% { transform: rotate(10deg); }
+  }
+  @keyframes hop {
+    0% { transform: translateY(0) scale(1, 1); }
+    25% { transform: translateY(2px) scale(1.06, 0.92); }
+    55% { transform: translateY(-12px) scale(0.96, 1.05); }
+    100% { transform: translateY(0) scale(1, 1); }
+  }
+  @keyframes heart {
+    0% { opacity: 0; transform: translateY(6px) scale(0.4); }
+    30% { opacity: 1; transform: translateY(-6px) scale(1.1); }
+    100% { opacity: 0; transform: translateY(-34px) scale(0.9); }
+  }
+  @keyframes tick {
+    0% { opacity: 1; }
+    50% { opacity: 0.25; }
+  }
+  @keyframes doze {
+    0%, 100% { opacity: 0; transform: translate(0, 4px) scale(0.8); }
+    40%, 60% { opacity: 1; transform: translate(4px, -4px) scale(1); }
+  }
+}
+
+:root {
+  color-scheme: light;
+
+  --background: #FFF4F7;
+  --foreground: #43222F;
+  --card: #FFFFFF;
+  --card-foreground: #43222F;
+  --popover: #FFFFFF;
+  --popover-foreground: #43222F;
+
+  --primary: #FF9EC4;
+  --primary-foreground: #43222F;
+  --strawberry: #C8336F;
+  --secondary: #CFE5FA;
+  --secondary-foreground: #1F3A5F;
+  --sky: #CFE5FA;
+  --sky-foreground: #1F3A5F;
+  --butter: #FFE7A1;
+  --butter-foreground: #5B4212;
+  --mint: #CDEFDB;
+  --mint-foreground: #1F5A3C;
+
+  --muted: #FFEAF2;
+  --muted-foreground: #8A5169;
+  --accent: #FFE0EC;
+  --accent-foreground: #43222F;
+  --destructive: #C0304C;
+  --destructive-soft: #FFE3E8;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #F7D3E1;
+  --input: #F2C2D5;
+  --ring: #E8588F;
+  --lip: #F6CADB;
+  --shadow: rgb(200 51 111 / 0.16);
+  --gingham: rgb(255 158 196 / 0.11);
+  --check: rgb(255 255 255 / 0.55);
+
+  --chart-1: #E8588F;
+  --chart-2: #5B9BD5;
+  --chart-3: #E0A92E;
+  --chart-4: #3FAF7A;
+  --chart-5: #9A7BE0;
+
+  --kitty-fur: #FFFFFF;
+  --kitty-ink: #3A1F2B;
+  --kitty-pink: #FF9EC4;
+  --kitty-bow: #FF6FA5;
+  --kitty-blush: #FFB8D2;
+
+  --radius: 1.25rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --background: #1E1219;
+    --foreground: #FCE9F0;
+    --card: #2B1A24;
+    --card-foreground: #FCE9F0;
+    --popover: #2B1A24;
+    --popover-foreground: #FCE9F0;
+
+    --primary: #FF9EC4;
+    --primary-foreground: #2B1A24;
+    --strawberry: #FF8FB8;
+    --secondary: #233349;
+    --secondary-foreground: #CFE5FA;
+    --sky: #233349;
+    --sky-foreground: #CFE5FA;
+    --butter: #3D3117;
+    --butter-foreground: #FFE39E;
+    --mint: #1B3A2B;
+    --mint-foreground: #BDEBD2;
+
+    --muted: #3A2431;
+    --muted-foreground: #C9A0B2;
+    --accent: #432A39;
+    --accent-foreground: #FCE9F0;
+    --destructive: #FF7A8F;
+    --destructive-soft: #43222B;
+    --destructive-foreground: #2B1A24;
+
+    --border: #4A2F3E;
+    --input: #5A3A4B;
+    --ring: #FF8FB8;
+    --lip: #170D13;
+    --shadow: rgb(0 0 0 / 0.4);
+    --gingham: rgb(255 158 196 / 0.035);
+    --check: rgb(255 255 255 / 0.05);
+
+    --chart-1: #FF8FB8;
+    --chart-2: #8CBDEB;
+    --chart-3: #F2C45A;
+    --chart-4: #6BD19E;
+    --chart-5: #B9A0F0;
+
+    --kitty-fur: #FFF7FA;
+    --kitty-blush: #FF9EC4;
+  }
+}
+
+/* A widget: white, puffy, with a soft lip along its bottom edge. */
+@utility tile {
+  border-radius: var(--radius-3xl);
+  border: 2px solid var(--border);
+  background-color: var(--card);
+  color: var(--card-foreground);
+  box-shadow:
+    inset 0 -4px 0 0 var(--lip),
+    0 10px 24px -14px var(--shadow);
+  &:is(a, button, label):active {
+    box-shadow:
+      inset 0 -1px 0 0 var(--lip),
+      0 4px 10px -8px var(--shadow);
+  }
+}
+
+/* Squish on press, spring back on release. */
+@utility press {
+  transition:
+    transform 420ms var(--ease-spring),
+    box-shadow 200ms var(--ease-out-expo),
+    background-color 200ms var(--ease-out-expo),
+    border-color 200ms var(--ease-out-expo);
+  -webkit-tap-highlight-color: transparent;
+  &:active {
+    transform: translateY(2px) scale(0.97);
+    transition-duration: 90ms;
+  }
+}
+
+/* The blue gingham on the clock and other feature tiles. */
+@utility check {
+  background-color: var(--sky);
+  background-image:
+    linear-gradient(90deg, var(--check) 50%, transparent 50%),
+    linear-gradient(var(--check) 50%, transparent 50%);
+  background-size: 26px 26px;
+}
+
+/* A fill that slides in from the left on hover. The element needs a colour
+   set in --slide. */
+@utility slide-fill {
+  isolation: isolate;
+  overflow: hidden;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--slide, var(--accent));
+    transform: translateX(-101%);
+    transition: transform 380ms var(--ease-out-expo);
+  }
+  @media (hover: hover) {
+    &:hover::before {
+      transform: translateX(0);
+    }
+  }
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
   html {
     @apply font-sans;
+    -webkit-text-size-adjust: 100%;
+    scrollbar-color: var(--input) transparent;
+    accent-color: var(--strawberry);
+  }
+  body {
+    background-color: var(--background);
+    background-image:
+      linear-gradient(90deg, var(--gingham) 50%, transparent 50%),
+      linear-gradient(var(--gingham) 50%, transparent 50%);
+    background-size: 44px 44px;
+    color: var(--foreground);
+    font-weight: 500;
+    caret-color: var(--strawberry);
+  }
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+  ::selection {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+  :focus-visible {
+    outline: 3px solid var(--ring);
+    outline-offset: 2px;
+  }
+  input::placeholder, textarea::placeholder {
+    color: var(--muted-foreground);
+    opacity: 1;
+  }
+  .lucide {
+    stroke-width: 2.25px;
+  }
+  a {
+    text-underline-offset: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

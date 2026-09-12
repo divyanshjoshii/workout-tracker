@@ -4,8 +4,10 @@ import { useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
-import { Plus, Trash2, Calendar, Clock, Save, Trash, Copy, Play } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
+import { Plus, Trash2, Calendar, Clock, Save, Trash, Copy, Play, Link2, Unlink } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { deleteWorkout } from "@/app/actions"
 import { saveAsTemplate } from "@/app/workout/actions"
@@ -78,79 +80,75 @@ export function EditWorkout({ session, initialWorkoutExercises, targetMuscles = 
   }
 
   return (
-    <div className="flex flex-col p-4 space-y-6 max-w-lg mx-auto pb-24">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Edit Workout</h1>
-        <div className="flex gap-2">
+    <div className="mx-auto flex max-w-md flex-col gap-5 px-4 pt-5 pb-8">
+      <header className="flex flex-col gap-3 pt-1">
+        <h1 className="font-display text-title">Edit workout</h1>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={handleSave} disabled={isPending} className="rounded-full">
+            <Save /> Save
+          </Button>
+          <Button onClick={() => router.push(`/workout/${session.id}`)} variant="secondary" className="rounded-full">
+            <Play fill="currentColor" /> Resume
+          </Button>
           <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
-            <DialogTrigger className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3">
-              <Copy className="h-4 w-4 mr-2" />
-              Save as Template
+            <DialogTrigger render={<Button variant="outline" className="rounded-full" />}>
+              <Copy /> Save as template
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md w-[95vw] rounded-xl bg-card border-border">
+            <DialogContent className="w-[95vw] sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Save as Template</DialogTitle>
+                <DialogTitle>Save as template</DialogTitle>
+                <DialogDescription>
+                  Saves the exercises in this workout as a routine you can start again.
+                </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Template Name</label>
-                  <Input
-                    value={templateName}
-                    onChange={(e) => setTemplateName(e.target.value)}
-                    placeholder="e.g., Heavy Pull Day"
-                    className="bg-background"
-                  />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  This will save the current exercises in this workout as a reusable template.
-                </p>
+              <div className="flex flex-col gap-2 pb-1">
+                <Label htmlFor="template-name">Template name</Label>
+                <Input
+                  id="template-name"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  placeholder="e.g., Heavy Pull Day"
+                />
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsTemplateDialogOpen(false)}>Cancel</Button>
                 <Button onClick={handleSaveTemplate} disabled={isPending || !templateName}>
-                  {isPending ? "Saving..." : "Save Template"}
+                  {isPending ? "Saving..." : "Save template"}
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
-
-          <Button onClick={() => router.push(`/workout/${session.id}`)} variant="secondary" className="h-9 px-4 font-semibold">
-            <Play className="w-4 h-4 mr-2" /> Resume
-          </Button>
-          <Button onClick={handleSave} disabled={isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-9 px-4">
-            <Save className="w-4 h-4 mr-2" /> Save
-          </Button>
         </div>
       </header>
 
       {/* Session Details */}
-      <Card className="border-border bg-card">
-        <CardContent className="pt-6 space-y-4">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Workout Name</label>
+      <Card>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="workout-name">Workout name</Label>
             <Input
+              id="workout-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="bg-background border-border"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center"><Calendar className="w-3 h-3 mr-1" /> Date</label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="workout-date"><Calendar className="size-3.5" /> Date</Label>
               <Input
+                id="workout-date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="bg-background border-border"
               />
             </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center"><Clock className="w-3 h-3 mr-1" /> Duration (mins)</label>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="workout-duration"><Clock className="size-3.5" /> Minutes</Label>
               <Input
+                id="workout-duration"
                 type="number"
                 value={durationMinutes}
                 onChange={(e) => setDurationMinutes(e.target.value)}
-                className="bg-background border-border"
                 placeholder="e.g. 45"
               />
             </div>
@@ -158,48 +156,48 @@ export function EditWorkout({ session, initialWorkoutExercises, targetMuscles = 
         </CardContent>
       </Card>
 
-      <div className="space-y-6">
+      <div className="flex flex-col gap-5">
         {workoutExercises.map((we, index) => {
           const { isLinkedToNext, isLinkedToPrev, hasNext, isSupersetFirst } = supersetFlags(workoutExercises, index)
+          const linked = isLinkedToNext || isLinkedToPrev
 
           return (
-          <div key={we.id} className="relative mt-2">
+          <div key={we.id} className={isLinkedToPrev ? "relative -mt-5" : "relative mt-1"}>
             {isSupersetFirst && (
-               <div className="absolute -top-3 left-4 bg-primary text-primary-foreground text-[10px] uppercase font-bold px-2 py-0.5 rounded-full z-20 shadow-sm">
-                 SUPERSET
-               </div>
+              <span className="absolute -top-3 left-5 z-20 inline-flex items-center gap-1 rounded-full border-2 border-card bg-sky px-2.5 py-0.5 text-xs font-bold text-sky-foreground">
+                <Link2 className="size-3.5" /> Superset
+              </span>
             )}
             <Card
-              className={`bg-card relative z-10
-                ${isLinkedToNext ? 'rounded-b-none border-b-0' : 'border-border border'}
-                ${isLinkedToPrev ? 'rounded-t-none border-t-0' : 'border-border border'}
-                ${isLinkedToNext || isLinkedToPrev ? 'border-primary/30 border-l-4' : ''}
-              `}
+              className={cn(
+                "relative z-10 gap-3 py-4",
+                linked && "bg-[color-mix(in_oklab,var(--sky)_32%,var(--card))]",
+                isLinkedToNext && "rounded-b-none border-b-0 shadow-none",
+                isLinkedToPrev && "rounded-t-none border-t-2 border-dashed border-t-[color-mix(in_oklab,var(--sky-foreground)_18%,transparent)]"
+              )}
             >
-              {isLinkedToPrev && <div className="h-px bg-border/50 mx-4 mt-2"></div>}
-              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-lg text-primary flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <span>{we.exercises.name}</span>
-                    {hasNext && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`h-6 text-[10px] px-2 rounded-full border ${isLinkedToNext ? 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/20' : 'text-muted-foreground border-border hover:text-foreground'}`}
-                        onClick={() => toggleSupersetLink(index)}
-                      >
-                        {isLinkedToNext ? '🔗 Unlink Superset' : '🔗 Superset Below'}
-                      </Button>
-                    )}
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => removeExercise(we.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </CardTitle>
+              <CardHeader className="flex flex-row items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-[1.0625rem] leading-snug">{we.exercises.name}</CardTitle>
+                  {hasNext && (
+                    <Button
+                      variant={isLinkedToNext ? "secondary" : "outline"}
+                      size="xs"
+                      className="mt-1.5 rounded-full"
+                      onClick={() => toggleSupersetLink(index)}
+                    >
+                      {isLinkedToNext ? <Unlink /> : <Link2 />}
+                      {isLinkedToNext ? "Unlink superset" : "Superset below"}
+                    </Button>
+                  )}
+                </div>
+                <Button variant="ghost" size="icon-sm" aria-label={`Remove ${we.exercises.name}`} className="text-muted-foreground hover:text-destructive [--slide:var(--destructive-soft)]" onClick={() => removeExercise(we.id)}>
+                  <Trash2 />
+                </Button>
               </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="grid grid-cols-[3rem_1fr_1fr_3rem] gap-2 text-xs font-semibold text-muted-foreground uppercase text-center mb-2">
+              <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-[2.5rem_1fr_1fr_2.5rem] gap-2 text-center text-[0.6875rem] font-bold text-muted-foreground">
                   <span>Set</span>
                   <span>kg</span>
                   <span>Reps</span>
@@ -209,42 +207,44 @@ export function EditWorkout({ session, initialWorkoutExercises, targetMuscles = 
                 {we.workout_sets
                   .sort((a, b) => a.set_number - b.set_number)
                   .map((set, idx) => (
-                    <div key={set.id} className="grid grid-cols-[3rem_1fr_1fr_3rem] gap-2 items-center">
-                      <div className="text-center font-medium bg-secondary/20 text-secondary rounded-md h-9 flex items-center justify-center">
+                    <div key={set.id} className="grid grid-cols-[2.5rem_1fr_1fr_2.5rem] items-center gap-2">
+                      <div className="grid h-10 place-items-center rounded-xl bg-sky font-display text-sm text-sky-foreground">
                         {idx + 1}
                       </div>
                       <Input
                         type="number"
+                        aria-label="Weight in kg"
                         placeholder="--"
                         value={set.weight ?? ""}
                         onChange={(e) => updateSet(we.id, set.id, "weight", e.target.value)}
-                        className="h-9 text-center bg-background border-border"
+                        className="h-10 rounded-xl text-center"
                       />
                       <Input
                         type="number"
+                        aria-label="Reps"
                         placeholder="--"
                         value={set.reps || ""}
                         onChange={(e) => updateSet(we.id, set.id, "reps", e.target.value)}
-                        className="h-9 text-center bg-background border-border"
+                        className="h-10 rounded-xl text-center"
                       />
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        aria-label="Remove set"
+                        className="text-muted-foreground hover:text-destructive [--slide:var(--destructive-soft)]"
                         onClick={() => removeSet(we.id, set.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 />
                       </Button>
                     </div>
                   ))}
 
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="w-full mt-2 border-border border-dashed text-muted-foreground hover:text-foreground"
+                  className="mt-1 h-11 w-full border-dashed border-input text-strawberry"
                   onClick={() => addSet(we.id)}
                 >
-                  <Plus className="h-4 w-4 mr-2" /> Add Set
+                  <Plus /> Add set
                 </Button>
               </div>
             </CardContent>
@@ -257,17 +257,16 @@ export function EditWorkout({ session, initialWorkoutExercises, targetMuscles = 
 
       <FeelingSelector value={feeling} onChange={setFeeling} />
 
-      <div className="pt-8">
-        <Button
-          variant="destructive"
-          onClick={handleDelete}
-          disabled={isPending}
-          className="w-full h-12 bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground border border-destructive/20"
-        >
-          <Trash className="w-4 h-4 mr-2" />
-          Delete Workout
-        </Button>
-      </div>
+      <Button
+        variant="destructive"
+        size="lg"
+        onClick={handleDelete}
+        disabled={isPending}
+        className="mt-4 w-full"
+      >
+        <Trash />
+        Delete workout
+      </Button>
     </div>
   )
 }

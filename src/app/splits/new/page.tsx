@@ -1,18 +1,19 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { ArrowLeft, Plus, Trash2, Check } from "lucide-react"
+import { ArrowLeft, Plus, Trash2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useState, useTransition } from "react"
 import { createSplit } from "../actions"
 
 const MUSCLE_GROUPS = [
-  "Abdominals", "Abductors", "Adductors", "Biceps", "Calves", 
-  "Chest", "Forearms", "Glutes", "Hamstrings", "Lats", 
-  "Lower Back", "Middle Back", "Neck", "Quadriceps", 
+  "Abdominals", "Abductors", "Adductors", "Biceps", "Calves",
+  "Chest", "Forearms", "Glutes", "Hamstrings", "Lats",
+  "Lower Back", "Middle Back", "Neck", "Quadriceps",
   "Shoulders", "Traps", "Triceps"
 ]
 
@@ -38,7 +39,7 @@ export default function NewSplitPage() {
   function toggleTargetMuscle(dayIndex: number, muscle: string) {
     const newDays = [...days]
     const currentTargets = newDays[dayIndex].targets
-    
+
     if (currentTargets.includes(muscle)) {
       newDays[dayIndex].targets = currentTargets.filter(m => m !== muscle)
     } else {
@@ -57,7 +58,7 @@ export default function NewSplitPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
-    
+
     if (days.some(d => d.name.trim() === "")) {
       setError("Please fill in all day names or remove empty ones.")
       return
@@ -77,70 +78,69 @@ export default function NewSplitPage() {
   }
 
   return (
-    <div className="flex flex-col p-4 space-y-6 max-w-lg mx-auto pb-24">
-      <header className="flex items-center mt-4">
-        <Link href="/splits">
-          <Button variant="ghost" size="icon" className="-ml-2 mr-2">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+    <div className="mx-auto flex max-w-md flex-col gap-5 px-4 pt-5 pb-6">
+      <header className="flex items-center gap-3">
+        <Link href="/splits" aria-label="Back to splits" className={buttonVariants({ variant: "outline", size: "icon", className: "rounded-full" })}>
+          <ArrowLeft className="size-5" />
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight">Create Split</h1>
+        <h1 className="font-display text-title">Create a split</h1>
       </header>
 
-      <Card className="border-border bg-card">
+      <Card>
         <CardHeader>
-          <CardTitle>Split Details</CardTitle>
-          <CardDescription>Name your routine and define the targeted muscles for each day.</CardDescription>
+          <CardTitle>Split details</CardTitle>
+          <CardDescription>Name your routine and pick the muscles each day works.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="name">Split Name</Label>
-              <Input 
-                id="name" 
-                name="name" 
-                placeholder="e.g., Bro Split, PPL" 
-                required 
-                className="bg-background"
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="name">Split name</Label>
+              <Input
+                id="name"
+                name="name"
+                placeholder="e.g., Bro Split, PPL"
+                required
               />
             </div>
 
-            <div className="space-y-4 pt-4 border-t border-border">
+            <div className="flex flex-col gap-3 border-t-2 pt-5">
               <div className="flex items-center justify-between">
-                <Label>Workout Days</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addDay}>
-                  <Plus className="h-4 w-4 mr-1" /> Add Day
+                <h2 className="font-display text-base">Workout days</h2>
+                <Button type="button" variant="outline" size="sm" className="rounded-full text-strawberry" onClick={addDay}>
+                  <Plus /> Add day
                 </Button>
               </div>
-              
-              <div className="space-y-6">
+
+              <div className="flex flex-col gap-3">
                 {days.map((day, index) => (
-                  <div key={index} className="p-4 border border-border rounded-lg bg-background/50 space-y-3">
+                  <div key={index} className="flex flex-col gap-3 rounded-[1.25rem] bg-muted/70 p-3">
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-secondary/20 text-secondary text-sm font-bold shrink-0">
+                      <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-sky font-display text-sm text-sky-foreground">
                         {index + 1}
                       </div>
                       <Input
                         value={day.name}
                         onChange={(e) => updateDayName(index, e.target.value)}
-                        placeholder="Day Name (e.g., Pull Day)"
+                        placeholder="Day name (e.g., Pull Day)"
+                        aria-label={`Day ${index + 1} name`}
                         required
-                        className="bg-card font-medium"
+                        className="bg-card"
                       />
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
+                      <Button
+                        type="button"
+                        variant="ghost"
                         size="icon"
+                        aria-label={`Remove day ${index + 1}`}
                         onClick={() => removeDay(index)}
                         disabled={days.length <= 1}
-                        className="text-muted-foreground hover:text-destructive shrink-0"
+                        className="shrink-0 text-muted-foreground hover:text-destructive [--slide:var(--destructive-soft)]"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 />
                       </Button>
                     </div>
-                    
+
                     <div>
-                      <Label className="text-xs text-muted-foreground mb-2 block">Target Muscle Groups (Filters Exercises)</Label>
+                      <p className="mb-2 text-xs font-bold text-muted-foreground">Target muscles, used to filter exercises</p>
                       <div className="flex flex-wrap gap-1.5">
                         {MUSCLE_GROUPS.map(m => {
                           const isSelected = day.targets.includes(m)
@@ -148,12 +148,14 @@ export default function NewSplitPage() {
                             <button
                               key={m}
                               type="button"
+                              aria-pressed={isSelected}
                               onClick={() => toggleTargetMuscle(index, m)}
-                              className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${
-                                isSelected 
-                                  ? "bg-primary text-primary-foreground border-primary" 
-                                  : "bg-card text-muted-foreground border-border hover:border-primary/50"
-                              }`}
+                              className={cn(
+                                "press rounded-full border-2 px-2.5 py-1 text-xs font-bold",
+                                isSelected
+                                  ? "border-transparent bg-primary text-primary-foreground"
+                                  : "border-border bg-card text-muted-foreground hover:text-foreground"
+                              )}
                             >
                               {m}
                             </button>
@@ -167,13 +169,13 @@ export default function NewSplitPage() {
             </div>
 
             {error && (
-              <div className="text-sm text-destructive font-medium p-3 bg-destructive/10 rounded-md">
+              <div role="alert" className="rounded-2xl bg-destructive-soft p-3 text-sm font-bold text-destructive">
                 {error}
               </div>
             )}
 
-            <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={isPending}>
-              {isPending ? "Saving..." : "Save Split"}
+            <Button type="submit" size="lg" className="w-full" disabled={isPending}>
+              {isPending ? "Saving..." : "Save split"}
             </Button>
           </form>
         </CardContent>

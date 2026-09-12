@@ -6,6 +6,8 @@ import { ExerciseCard } from "@/components/exercises/exercise-card"
 import { FavoriteButton } from "@/components/exercises/favorite-button"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
+import { KittyLoaf } from "@/components/kitty/kitty"
+import { cn } from "@/lib/utils"
 
 type Exercise = Pick<Database["public"]["Tables"]["exercises"]["Row"], "id" | "name" | "muscle_group" | "category" | "equipment">
 
@@ -37,36 +39,43 @@ export function ExerciseListClient({ initialExercises, favoriteExerciseIds, user
   })
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search exercises..."
+          aria-label="Search exercises"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 bg-card border-border"
+          className="bg-card pl-10"
         />
       </div>
 
-      <div className="flex overflow-x-auto pb-2 gap-2 hide-scrollbar">
-        {CATEGORIES.map((category) => (
-          <button
-            key={category}
-            onClick={() => setSelectedCategory(category)}
-            className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
-              selectedCategory === category
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-card text-muted-foreground border-border hover:bg-accent"
-            }`}
-          >
-            {category}
-          </button>
-        ))}
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pt-1 pb-2 [scrollbar-width:none]" role="group" aria-label="Category">
+        {CATEGORIES.map((category) => {
+          const selected = selectedCategory === category
+          return (
+            <button
+              key={category}
+              onClick={() => setSelectedCategory(category)}
+              aria-pressed={selected}
+              className={cn(
+                "press shrink-0 rounded-full border-2 px-4 py-1.5 text-sm font-bold whitespace-nowrap",
+                selected
+                  ? "border-transparent bg-primary text-primary-foreground shadow-[inset_0_-3px_0_0_rgb(200_51_111/0.3)]"
+                  : "border-border bg-card text-muted-foreground shadow-[inset_0_-3px_0_0_var(--lip)] hover:text-foreground"
+              )}
+            >
+              {category}
+            </button>
+          )
+        })}
       </div>
 
-      <div className="grid gap-3 pt-2 pb-20">
+      <div className="grid gap-2.5">
         {sortedExercises.length === 0 ? (
-          <div className="text-center py-10 text-muted-foreground">
+          <div className="flex flex-col items-center gap-2 py-10 text-sm font-bold text-muted-foreground">
+            <KittyLoaf className="w-28" />
             No exercises found.
           </div>
         ) : (

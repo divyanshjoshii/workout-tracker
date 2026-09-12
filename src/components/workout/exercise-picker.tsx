@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/client"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import { Plus, Search } from "lucide-react"
+import { KittyLoaf } from "@/components/kitty/kitty"
 
 // The table holds around 870 exercises. The workout pages used to fetch every
 // column of every row up front to feed this dialog -- about 840 KB per page
@@ -68,33 +69,36 @@ export function ExercisePicker({ targetMuscles = [], onPick }: ExercisePickerPro
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger className="w-full h-12 text-lg font-medium border border-border border-dashed bg-card/50 hover:bg-accent flex items-center justify-center rounded-md">
-        <Plus className="h-5 w-5 mr-2" /> Add Exercise
+      <DialogTrigger className="press slide-fill group relative flex h-14 w-full items-center justify-center gap-2 rounded-[1.25rem] border-2 border-dashed border-input bg-card/70 text-base font-bold text-strawberry [--slide:var(--accent)]">
+        <Plus className="size-5 transition-transform duration-500 ease-spring group-hover:rotate-90" /> Add exercise
       </DialogTrigger>
-      <DialogContent className="max-w-md h-[80vh] flex flex-col p-0 border-border bg-background">
-        <DialogHeader className="p-4 border-b border-border shrink-0">
-          <DialogTitle>Select Exercise</DialogTitle>
-          <Input
-            placeholder="Search exercises..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="mt-4 bg-card border-border"
-          />
+      <DialogContent className="flex h-[80vh] max-w-md flex-col gap-0 p-0">
+        <DialogHeader className="shrink-0 border-b-2 p-5 pb-4">
+          <DialogTitle>Add an exercise</DialogTitle>
+          <div className="relative mt-3">
+            <Search className="pointer-events-none absolute top-3.5 left-3.5 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Search exercises..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
           {targetMuscles.length > 0 && (
-            <div className="flex items-center mt-3 gap-2">
+            <div className="mt-3 flex items-center gap-2">
               <Button
                 variant={showTargetedOnly ? "default" : "outline"}
                 size="sm"
                 onClick={() => setShowTargetedOnly(true)}
-                className="text-xs h-8"
+                className="min-w-0 rounded-full"
               >
-                Target Muscles ({targetMuscles.join(', ')})
+                <span className="truncate">Target muscles ({targetMuscles.join(', ')})</span>
               </Button>
               <Button
                 variant={!showTargetedOnly ? "default" : "outline"}
                 size="sm"
                 onClick={() => setShowTargetedOnly(false)}
-                className="text-xs h-8"
+                className="rounded-full"
               >
                 All
               </Button>
@@ -102,38 +106,39 @@ export function ExercisePicker({ targetMuscles = [], onPick }: ExercisePickerPro
           )}
         </DialogHeader>
         <div className="flex-1 overflow-y-auto p-2">
-          <div className="space-y-1">
+          <div className="flex flex-col gap-1">
             {results.map(ex => (
               <button
                 key={ex.id}
                 onClick={() => pick(ex.id)}
-                className="w-full text-left px-4 py-3 rounded-lg hover:bg-accent/50 transition-colors flex justify-between items-center"
+                className="group flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left transition-colors hover:bg-accent active:scale-[0.98]"
               >
                 <div className="flex items-center gap-3">
                   {ex.image_url ? (
-                    <div className="w-10 h-10 rounded-md bg-muted overflow-hidden shrink-0 flex items-center justify-center">
-                      <img src={ex.image_url} alt={ex.name} loading="lazy" decoding="async" className="object-cover w-full h-full mix-blend-screen" />
+                    <div className="size-11 shrink-0 overflow-hidden rounded-xl border-2 border-border bg-white">
+                      <img src={ex.image_url} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
                     </div>
                   ) : (
-                    <div className="w-10 h-10 rounded-md bg-muted shrink-0 flex items-center justify-center">
-                      <span className="text-xs text-muted-foreground">Img</span>
-                    </div>
+                    <div className="size-11 shrink-0 rounded-xl border-2 border-border bg-muted" />
                   )}
-                  <div>
-                    <div className="font-medium text-foreground text-sm line-clamp-1">{ex.name}</div>
-                    <div className="text-xs text-muted-foreground">{ex.muscle_group}</div>
+                  <div className="min-w-0">
+                    <div className="line-clamp-1 text-sm font-bold text-foreground">{ex.name}</div>
+                    <div className="text-xs font-bold text-muted-foreground">{ex.muscle_group}</div>
                   </div>
                 </div>
-                <Plus className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-strawberry transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                  <Plus className="size-4" />
+                </span>
               </button>
             ))}
             {results.length === LIMIT && (
-              <div className="text-center py-3 text-xs text-muted-foreground">
+              <div className="py-3 text-center text-xs font-bold text-muted-foreground">
                 Showing the first {LIMIT}. Keep typing to narrow it down.
               </div>
             )}
             {results.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="flex flex-col items-center gap-2 py-8 text-sm font-bold text-muted-foreground">
+                <KittyLoaf className="w-24" />
                 {loading ? "Searching..." : "No exercises found."}
               </div>
             )}

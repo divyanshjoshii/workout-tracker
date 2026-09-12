@@ -1,12 +1,20 @@
 import { requireUser } from "@/lib/supabase/server"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Dumbbell, LogOut, Settings, Trophy, ChevronRight, Play } from "lucide-react"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { BookHeart, CalendarRange, ChevronRight, Dumbbell, Play } from "lucide-react"
 import Link from "next/link"
 import { BodyWeightWidget } from "@/components/dashboard/body-weight-widget"
 import { LogPastWorkout } from "@/components/dashboard/log-past-workout"
 import { startWorkout, startWorkoutFromTemplate } from "@/app/workout/actions"
 import { HallOfFameEditor } from "@/components/dashboard/hall-of-fame-editor"
+import { KittyClock } from "@/components/dashboard/kitty-clock"
+import { AppIcon } from "@/components/dashboard/app-icon"
+import { Bow, KittyFace, KittyLift, KittyLoaf, Paw } from "@/components/kitty/kitty"
+import { Watchful } from "@/components/kitty/watchful"
+import { CalendarLeaf } from "@/components/layout/calendar-leaf"
+import { cn } from "@/lib/utils"
+
+// One ribbon colour per hall of fame entry.
+const RIBBONS = ["var(--kitty-bow)", "#8CC4F2", "#FFD166"]
 
 export default async function DashboardPage() {
   const { supabase, user } = await requireUser()
@@ -128,140 +136,132 @@ export default async function DashboardPage() {
     }
   }
 
+  const workoutsThisWeek = weeklyWorkouts || 0
+
   return (
-    <div className="flex flex-col p-4 space-y-6 max-w-lg mx-auto pb-24">
-      {/* Header */}
-      <header className="flex items-center justify-between mt-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground text-sm">Welcome back, {displayName}!</p>
-        </div>
-        <form action="/auth/signout" method="post">
-          <Button variant="ghost" size="sm" type="submit" className="text-muted-foreground hover:text-foreground">
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
-        </form>
+    <div className="mx-auto flex max-w-md flex-col gap-4 px-4 pt-4 pb-6">
+      {/* The kitty on the clock sits in the header's right-hand space. */}
+      <header className="flex h-24 items-end pb-4">
+        <h1 className="max-w-[62%] font-display text-title">Hi, {displayName}</h1>
       </header>
 
-      {/* Hall of Fame */}
-      <Card className="border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-transparent">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-yellow-500" />
-              <h2 className="font-bold text-sm text-yellow-600 dark:text-yellow-500 uppercase tracking-wider">Hall of Fame</h2>
-            </div>
-            <HallOfFameEditor currentSelections={hofIds} />
-          </div>
-          <div className="space-y-2">
-            {hallOfFame.length > 0 ? hallOfFame.map((item, idx) => (
-              <div key={idx} className="flex justify-between items-center bg-background/50 rounded-md p-2 px-3">
-                  <span className="font-medium text-sm truncate pr-2">{item.name}</span>
-                  <span className="font-mono font-bold text-primary shrink-0">
-                    {item.pr.weight > 0 ? (
-                      <>{item.pr.weight}kg <span className="text-muted-foreground font-sans text-xs font-normal">x{item.pr.reps}</span></>
-                    ) : (
-                      <span className="text-muted-foreground font-sans text-xs font-normal">-</span>
-                    )}
-                  </span>
-                </div>
-            )) : (
-              <div className="text-sm text-yellow-700/70 dark:text-yellow-500/70 py-2 text-center">
-                Click the edit icon to pick your top 3 exercises!
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <KittyClock />
 
-      {/* Main Call to Action */}
-      <div className="space-y-4">
-        {nextSplitDay && (
-          <div className="space-y-2">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Suggested</h2>
-            <form action={matchingTemplate ? startWorkoutFromTemplate.bind(null, matchingTemplate.id, nextSplitDay.id) : startWorkout.bind(null, nextSplitDay.id)} className="block">
-              <Button type="submit" className="w-full h-16 text-lg font-bold shadow-md bg-primary hover:bg-primary/90 text-primary-foreground flex flex-col items-center justify-center relative overflow-hidden group">
-                <div className="absolute inset-0 bg-white/20 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                <span className="flex items-center text-sm font-medium opacity-90 uppercase tracking-widest mb-0.5">
-                  <Play className="w-3.5 h-3.5 mr-1" fill="currentColor" /> Up Next
-                </span>
-                <span>{nextSplitDay.name} {matchingTemplate && "(Template)"}</span>
+      {nextSplitDay ? (
+        <section className="tile relative overflow-hidden border-[rgb(200_51_111/0.2)] bg-primary text-primary-foreground shadow-[inset_0_-4px_0_0_rgb(200_51_111/0.28),0_10px_24px_-14px_var(--shadow)]">
+          <div className="relative z-10 flex flex-col p-5 pr-36">
+            <h2 className="font-display text-title">{nextSplitDay.name}</h2>
+            <p className="mt-1 text-sm font-bold opacity-80">
+              Up next in {activeSplit?.name}
+              {matchingTemplate && <> · {matchingTemplate.name}</>}
+            </p>
+            <form
+              action={matchingTemplate ? startWorkoutFromTemplate.bind(null, matchingTemplate.id, nextSplitDay.id) : startWorkout.bind(null, nextSplitDay.id)}
+              className="mt-4"
+            >
+              <Button type="submit" variant="outline" size="lg" className="rounded-full border-transparent pr-6 pl-5">
+                <Play fill="currentColor" className="transition-transform duration-500 ease-spring group-hover/button:scale-125" />
+                Start workout
               </Button>
             </form>
           </div>
-        )}
-        
-        <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Manual</h2>
-          <Link href="/workout" className="block">
-            <Button variant="outline" className="w-full h-14 text-lg font-semibold shadow-sm border-border bg-card hover:bg-accent">
-              <Dumbbell className="mr-2 h-5 w-5 text-primary" />
-              Select Template or Freestyle
-            </Button>
-          </Link>
-          <LogPastWorkout />
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {/* Clickable Last Workout */}
-        <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Last Workout</h2>
-          {lastWorkout ? (
-            <Link href={`/workout/${lastWorkout.id}/edit`} className="block group">
-              <Card className="border-border bg-card/50 hover:bg-accent/50 transition-colors cursor-pointer">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <div className="font-bold text-lg group-hover:text-primary transition-colors">{lastWorkout.name}</div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      {new Date(lastWorkout.date + 'T12:00:00Z').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                      {lastWorkout.duration_seconds ? ` • ${Math.round(lastWorkout.duration_seconds / 60)} min` : ""}
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                </CardContent>
-              </Card>
+          <Watchful eyeLevel={0.5} className="absolute right-3 bottom-4 w-32">
+            <KittyLift className="w-full" />
+          </Watchful>
+        </section>
+      ) : (
+        <section className="tile relative overflow-hidden border-[rgb(200_51_111/0.2)] bg-primary text-primary-foreground shadow-[inset_0_-4px_0_0_rgb(200_51_111/0.28),0_10px_24px_-14px_var(--shadow)]">
+          <div className="relative z-10 flex flex-col p-5 pr-36">
+            <h2 className="font-display text-title">Ready when you are</h2>
+            <p className="mt-1 text-sm font-bold opacity-80">Pick a template or go freestyle.</p>
+            <Link href="/workout" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "mt-4 w-fit rounded-full border-transparent pr-6 pl-5")}>
+              <Play fill="currentColor" />
+              Start a workout
             </Link>
-          ) : (
-            <Card className="border-border bg-card/50">
-              <CardContent className="p-4 text-muted-foreground py-2">
-                No workouts completed yet. Time to hit the gym!
-              </CardContent>
-            </Card>
-          )}
-        </div>
+          </div>
+          <Watchful eyeLevel={0.5} className="absolute right-3 bottom-4 w-32">
+            <KittyLift className="w-full" />
+          </Watchful>
+        </section>
+      )}
 
-        {/* Mini Stats Grid */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="border-border bg-card">
-            <CardContent className="p-4 flex flex-col justify-between h-full">
-              <div className="text-sm font-medium text-muted-foreground mb-4">This Week</div>
-              <div>
-                <div className="text-3xl font-bold text-primary">{weeklyWorkouts || 0}</div>
-                <div className="text-xs text-muted-foreground mt-1">Workouts</div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <BodyWeightWidget latestWeight={latestWeight?.weight || null} />
-        </div>
+      <nav aria-label="Shortcuts" className="grid grid-cols-4 gap-3 px-1 py-1">
+        <AppIcon href="/workout" label="Templates" icon={Dumbbell} tone="bg-primary text-primary-foreground" />
+        <LogPastWorkout />
+        <AppIcon href="/splits" label="Splits" icon={CalendarRange} tone="bg-sky text-sky-foreground" />
+        <AppIcon href="/progress" label="History" icon={BookHeart} tone="bg-mint text-mint-foreground" />
+      </nav>
 
-        {/* Quick Links */}
-        <div className="grid grid-cols-2 gap-4 pt-4">
-          <Link href="/splits">
-            <Button variant="outline" className="w-full border-border bg-card hover:bg-accent text-foreground">
-              <Settings className="w-4 h-4 mr-2 text-muted-foreground" />
-              Manage Splits
-            </Button>
-          </Link>
-          <Link href="/progress">
-            <Button variant="outline" className="w-full border-border bg-card hover:bg-accent text-foreground">
-              View History
-            </Button>
-          </Link>
-        </div>
+      <div className="grid grid-cols-2 gap-4">
+        <section className="tile flex flex-col bg-butter p-4 text-butter-foreground">
+          <h2 className="font-display text-base">This week</h2>
+          <p className="mt-3 flex items-baseline gap-1.5">
+            <span className="font-display text-stat tabular-nums">{workoutsThisWeek}</span>
+            <span className="text-sm font-bold">{workoutsThisWeek === 1 ? "workout" : "workouts"}</span>
+          </p>
+          <div aria-hidden="true" className="mt-auto flex gap-0.5 pt-3">
+            {Array.from({ length: 7 }, (_, i) => (
+              <Paw key={i} filled={i < workoutsThisWeek} className={cn("size-4", i >= workoutsThisWeek && "opacity-40")} />
+            ))}
+          </div>
+        </section>
+
+        <BodyWeightWidget latestWeight={latestWeight?.weight || null} />
       </div>
+
+      <section className="tile p-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-display text-heading">Hall of fame</h2>
+          <HallOfFameEditor currentSelections={hofIds} />
+        </div>
+        {hallOfFame.length > 0 ? (
+          <ul className="mt-3 flex flex-col gap-2">
+            {hallOfFame.map((item, idx) => (
+              <li key={item.id} className="flex items-center gap-3 rounded-2xl bg-muted/70 py-2.5 pr-4 pl-3">
+                <Bow color={RIBBONS[idx % RIBBONS.length]} className="w-8 shrink-0" />
+                <span className="min-w-0 flex-1 truncate font-bold">{item.name}</span>
+                {item.pr.weight > 0 ? (
+                  <span className="shrink-0 font-display tabular-nums">
+                    {item.pr.weight}
+                    <span className="font-sans text-xs font-bold text-muted-foreground"> kg × {item.pr.reps}</span>
+                  </span>
+                ) : (
+                  <span className="shrink-0 text-xs font-bold text-muted-foreground">No sets yet</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="mt-3 flex items-center gap-3 rounded-2xl bg-muted/70 p-3">
+            <Watchful eyeLevel={0.6} className="w-14 shrink-0">
+              <KittyFace blink className="w-full" />
+            </Watchful>
+            <p className="text-sm font-bold text-muted-foreground">Pick up to three lifts to show off here.</p>
+          </div>
+        )}
+      </section>
+
+      {lastWorkout ? (
+        <Link href={`/workout/${lastWorkout.id}/edit`} className="tile press group flex items-center gap-4 p-4">
+          <CalendarLeaf date={lastWorkout.date} />
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate font-display text-base">{lastWorkout.name}</h2>
+            <span className="mt-0.5 block text-sm font-bold text-muted-foreground">
+              Last workout
+              {lastWorkout.duration_seconds ? ` · ${Math.round(lastWorkout.duration_seconds / 60)} min` : ""}
+            </span>
+          </div>
+          <ChevronRight className="size-5 shrink-0 text-muted-foreground transition-transform duration-300 ease-spring group-hover:translate-x-1" />
+        </Link>
+      ) : (
+        <section className="tile flex items-center gap-4 p-4">
+          <KittyLoaf className="w-24 shrink-0" />
+          <div>
+            <h2 className="font-display text-base">No workouts yet</h2>
+            <p className="mt-0.5 text-sm font-bold text-muted-foreground">She&apos;s napping until your first session.</p>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

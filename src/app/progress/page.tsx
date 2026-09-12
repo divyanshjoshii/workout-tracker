@@ -1,5 +1,8 @@
 import { requireUser } from "@/lib/supabase/server"
 import { ProgressClient } from "./progress-client"
+import { PageHeader } from "@/components/layout/page-header"
+import { KittyFace } from "@/components/kitty/kitty"
+import { Watchful } from "@/components/kitty/watchful"
 
 export default async function ProgressPage() {
   const { supabase, user } = await requireUser()
@@ -35,17 +38,20 @@ export default async function ProgressPage() {
     .gte("workout_sessions.created_at", oneWeekAgo.toISOString())
 
   return (
-    <div className="flex flex-col p-4 space-y-6 max-w-lg mx-auto pb-24">
-      <header className="flex items-center justify-between mt-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Progress</h1>
-          <p className="text-muted-foreground text-sm">Track your history and gains</p>
-        </div>
-      </header>
+    <div className="mx-auto flex max-w-md flex-col gap-5 px-4 pb-6">
+      <PageHeader
+        title="Progress"
+        description="Track your history and gains."
+        aside={
+          <Watchful eyeLevel={0.6} className="w-16 shrink-0">
+            <KittyFace blink className="w-full" />
+          </Watchful>
+        }
+      />
 
-      <ProgressClient 
-        sessions={sessions || []} 
-        weightEntries={weightEntries || []} 
+      <ProgressClient
+        sessions={sessions || []}
+        weightEntries={weightEntries || []}
         weeklyExercises={weeklyExercises || []}
       />
     </div>

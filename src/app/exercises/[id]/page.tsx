@@ -2,7 +2,8 @@ import { requireUser } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { ArrowLeft, Dumbbell, Activity, Target } from "lucide-react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
+import { KittyFace } from "@/components/kitty/kitty"
 import { FavoriteButton } from "@/components/exercises/favorite-button"
 import { ExerciseProgressCharts } from "@/components/exercises/exercise-progress-charts"
 
@@ -30,56 +31,56 @@ export default async function ExerciseDetailPage({ params }: { params: Promise<{
   const isFavorite = !!favorite
 
   return (
-    <div className="flex flex-col bg-background min-h-screen pb-20">
-      {/* Header Image Placeholder / Gradient */}
-      <div className={`h-64 w-full flex items-end p-4 relative ${!exercise.image_url ? 'bg-gradient-to-b from-primary/20 to-background' : 'bg-muted'}`}>
-        {exercise.image_url && (
-          <img 
-            src={exercise.image_url} 
-            alt={exercise.name} 
-            className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-60"
-          />
-        )}
-        <Link href="/exercises" className="absolute top-4 left-4 z-10">
-          <Button variant="secondary" size="icon" className="rounded-full bg-background/50 backdrop-blur-md border-border">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+    <div className="mx-auto flex max-w-md flex-col gap-5 px-4 pt-5 pb-6">
+      <div className="flex items-center justify-between">
+        <Link href="/exercises" aria-label="Back to exercises" className={buttonVariants({ variant: "outline", size: "icon", className: "rounded-full" })}>
+          <ArrowLeft className="size-5" />
         </Link>
-        <div className="absolute top-4 right-4 bg-background/50 backdrop-blur-md rounded-full p-1 border border-border z-10">
+        <div className="tile rounded-full p-0.5">
           <FavoriteButton exerciseId={exercise.id} userId={user.id} initialIsFavorite={isFavorite} />
         </div>
       </div>
 
-      <div className="p-4 space-y-6 max-w-lg mx-auto w-full -mt-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">{exercise.name}</h1>
-          <div className="flex flex-wrap gap-3 mt-4">
-            <div className="flex items-center text-sm font-medium bg-secondary/20 text-secondary px-3 py-1.5 rounded-full border border-secondary/30">
-              <Target className="w-4 h-4 mr-2" />
-              {exercise.muscle_group}
-            </div>
-            <div className="flex items-center text-sm font-medium bg-primary/10 text-primary px-3 py-1.5 rounded-full border border-primary/20">
-              <Activity className="w-4 h-4 mr-2" />
-              {exercise.category}
-            </div>
-            {exercise.equipment && (
-              <div className="flex items-center text-sm font-medium bg-accent text-accent-foreground px-3 py-1.5 rounded-full border border-border">
-                <Dumbbell className="w-4 h-4 mr-2" />
-                {exercise.equipment}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-3 pt-4 border-t border-border">
-          <h2 className="text-lg font-semibold text-foreground">Instructions</h2>
-          <p className="text-muted-foreground leading-relaxed">
-            {exercise.instructions || "No instructions provided for this exercise."}
-          </p>
-        </div>
-        
-        <ExerciseProgressCharts exerciseId={exercise.id} userId={user.id} />
+      <div className="tile grid aspect-[4/3] place-items-center overflow-hidden bg-white p-2">
+        {exercise.image_url ? (
+          <img
+            src={exercise.image_url}
+            alt={exercise.name}
+            className="size-full rounded-[1.25rem] object-contain"
+          />
+        ) : (
+          <KittyFace mood="happy" className="w-28" />
+        )}
       </div>
+
+      <div>
+        <h1 className="font-display text-title">{exercise.name}</h1>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-sky px-3 py-1.5 text-sm font-bold text-sky-foreground">
+            <Target className="size-4" />
+            {exercise.muscle_group}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-sm font-bold text-primary-foreground">
+            <Activity className="size-4" />
+            {exercise.category}
+          </span>
+          {exercise.equipment && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-butter px-3 py-1.5 text-sm font-bold text-butter-foreground">
+              <Dumbbell className="size-4" />
+              {exercise.equipment}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <section className="tile p-5">
+        <h2 className="font-display text-heading">Instructions</h2>
+        <p className="mt-2 leading-relaxed text-foreground/85">
+          {exercise.instructions || "No instructions provided for this exercise."}
+        </p>
+      </section>
+
+      <ExerciseProgressCharts exerciseId={exercise.id} userId={user.id} />
     </div>
   )
 }

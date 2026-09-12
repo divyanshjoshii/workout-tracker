@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Star } from "lucide-react"
+import { Heart } from "lucide-react"
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -48,12 +48,13 @@ export function FavoriteButton({ exerciseId, userId, initialIsFavorite }: Favori
       onClick={toggleFavorite}
       disabled={isLoading}
       className={cn(
-        "h-8 w-8 rounded-full transition-all",
-        isFavorite ? "text-yellow-400 hover:text-yellow-500 hover:bg-yellow-400/10" : "text-muted-foreground hover:text-foreground"
+        "rounded-full",
+        isFavorite ? "text-strawberry [--slide:var(--accent)]" : "text-muted-foreground hover:text-strawberry"
       )}
       aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+      aria-pressed={isFavorite}
     >
-      <Star className={cn("h-5 w-5", isFavorite && "fill-current")} />
+      <Heart key={String(isFavorite)} className={cn("size-5", isFavorite && "animate-hop fill-primary")} />
     </Button>
   )
 }

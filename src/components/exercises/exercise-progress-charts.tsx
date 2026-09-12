@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { Button } from "@/components/ui/button"
+import { Trophy } from "lucide-react"
+import { KittyLoaf } from "@/components/kitty/kitty"
 import { bestSet, e1rm } from "@/lib/e1rm"
 
 interface ExerciseProgressChartsProps {
@@ -33,7 +35,7 @@ export function ExerciseProgressCharts({ exerciseId, userId }: ExerciseProgressC
       if (!weData || weData.length === 0) return
 
       const weIds = weData.map(w => w.id)
-      
+
       const { data: setsData } = await supabase
         .from("workout_sets")
         .select("weight, reps, workout_exercise_id")
@@ -60,7 +62,7 @@ export function ExerciseProgressCharts({ exerciseId, userId }: ExerciseProgressC
 
       const rawChartData = Array.from(chartDataMap.entries()).map(([date, data]) => ({ date, ...data }))
       rawChartData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      
+
       setData(rawChartData)
     }
     fetchData()
@@ -78,37 +80,43 @@ export function ExerciseProgressCharts({ exerciseId, userId }: ExerciseProgressC
 
   if (data.length === 0) {
     return (
-      <Card className="border-border bg-card mt-6">
-        <CardContent className="p-6 text-center text-muted-foreground">
-          No data logged for this exercise yet. Add it to a workout to track progress!
-        </CardContent>
-      </Card>
+      <section className="tile flex flex-col items-center gap-2 p-6 text-center">
+        <KittyLoaf className="w-28" />
+        <p className="font-display text-heading">No progress yet</p>
+        <p className="text-sm font-bold text-muted-foreground">Add this exercise to a workout and your progress shows up here.</p>
+      </section>
     )
   }
 
   return (
-    <div className="space-y-4 mt-6">
+    <div className="flex flex-col gap-4">
       {pr && (
-        <Card className="border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-transparent">
-          <CardContent className="p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
-            <span className="font-bold text-sm text-yellow-600 dark:text-yellow-500 uppercase tracking-wider">All-Time PR <span className="text-muted-foreground font-normal normal-case text-xs">(Est. 1RM)</span></span>
-            <span className="font-mono font-bold text-xl text-primary">{pr.weight}kg <span className="text-muted-foreground font-sans text-sm font-normal">x{pr.reps}</span> <span className="text-sm font-normal text-muted-foreground ml-1">({pr.e1rm}kg e1RM)</span></span>
-          </CardContent>
-        </Card>
+        <section className="tile flex items-center gap-3 bg-butter p-4 text-butter-foreground">
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-card text-butter-foreground">
+            <Trophy className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="font-display text-base">All-time best</h2>
+            <p className="text-xs font-bold opacity-80">{pr.e1rm} kg estimated 1RM</p>
+          </div>
+          <p className="shrink-0 font-display text-2xl tabular-nums">
+            {pr.weight}<span className="font-sans text-sm font-bold"> kg × {pr.reps}</span>
+          </p>
+        </section>
       )}
 
-      <Card className="border-border bg-card">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex justify-between items-center">
-            <span>Strength Progression <span className="text-xs font-normal text-muted-foreground ml-2">(Est. 1RM)</span></span>
-          </CardTitle>
-          <div className="flex gap-2 mt-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Strength progression</CardTitle>
+          <p className="text-sm font-bold text-muted-foreground">Best estimated 1RM each day</p>
+          <div className="mt-2 grid grid-cols-4 gap-1 rounded-2xl border-2 bg-muted p-1">
             {(["week", "month", "year", "all"] as const).map(range => (
               <Button
                 key={range}
-                variant={timeRange === range ? "default" : "outline"}
+                variant={timeRange === range ? "outline" : "ghost"}
                 size="sm"
-                className="h-7 text-xs flex-1"
+                aria-pressed={timeRange === range}
+                className={timeRange === range ? "text-foreground" : "text-muted-foreground"}
                 onClick={() => setTimeRange(range)}
               >
                 {range.charAt(0).toUpperCase() + range.slice(1)}
@@ -116,16 +124,17 @@ export function ExerciseProgressCharts({ exerciseId, userId }: ExerciseProgressC
             ))}
           </div>
         </CardHeader>
-        <CardContent className="pt-4 pb-2 px-0 h-64">
+        <CardContent className="h-64 px-2 pb-1">
           {filteredData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={filteredData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                <XAxis dataKey="date" stroke="#666" fontSize={12} tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} />
-                <YAxis stroke="#666" fontSize={12} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#f8fafc' }}
-                  itemStyle={{ color: '#38bdf8' }}
+                <CartesianGrid strokeDasharray="4 6" stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} />
+                <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip
+                  cursor={{ stroke: 'var(--input)', strokeWidth: 2 }}
+                  contentStyle={{ backgroundColor: 'var(--popover)', border: '2px solid var(--border)', borderRadius: '16px', color: 'var(--foreground)', fontWeight: 700 }}
+                  itemStyle={{ color: 'var(--strawberry)' }}
                   labelFormatter={(val) => new Date(val).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                   formatter={(value: any, name: any, props: any) => {
                      if (name === "Estimated 1RM (kg)") {
@@ -134,11 +143,11 @@ export function ExerciseProgressCharts({ exerciseId, userId }: ExerciseProgressC
                      return [value, name]
                   }}
                 />
-                <Line type="monotone" dataKey="e1rm" name="Estimated 1RM (kg)" stroke="#38bdf8" strokeWidth={3} dot={{ r: 4, fill: '#38bdf8', strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="e1rm" name="Estimated 1RM (kg)" stroke="var(--chart-1)" strokeWidth={3.5} strokeLinecap="round" dot={{ r: 4.5, fill: 'var(--card)', stroke: 'var(--chart-1)', strokeWidth: 2.5 }} activeDot={{ r: 7, fill: 'var(--primary)', stroke: 'var(--card)', strokeWidth: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+            <div className="flex size-full items-center justify-center text-sm font-bold text-muted-foreground">
               No data in this time range.
             </div>
           )}

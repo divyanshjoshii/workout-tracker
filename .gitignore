@@ -51,3 +51,6 @@ docs/handoffs/
 
 # archify visual-check output (regenerable)
 docs/*.visual-check.*
+
+# impeccable design tool working state (local)
+.impeccable/

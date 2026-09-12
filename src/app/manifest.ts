@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Track your workouts easily.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#0B0F14',
-    theme_color: '#0B0F14',
+    background_color: '#FFF4F7',
+    theme_color: '#FFF4F7',
     icons: [
       {
         src: '/icon.png',

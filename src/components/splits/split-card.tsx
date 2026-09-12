@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Database } from "@/types/database"
 import { setActiveSplit, deleteSplit } from "@/app/splits/actions"
 import { useTransition } from "react"
-import { CheckCircle2, Trash2, GripVertical, Link as LinkIcon, Settings2 } from "lucide-react"
+import { Check, CheckCircle2, Trash2, GripVertical, Link as LinkIcon, Settings2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -46,31 +46,30 @@ function SortableSplitDayBadge({ day, templates }: { day: SplitDay, templates: {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<div ref={setNodeRef} style={style} className="flex items-center gap-1.5 group bg-background hover:bg-accent cursor-pointer border border-border rounded-full px-3 py-1 text-xs font-semibold text-foreground transition-colors" />}>
-        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none p-0.5 -ml-1.5" onClick={(e) => e.stopPropagation()}>
-          <GripVertical className="h-3 w-3" />
+      <DialogTrigger render={<div ref={setNodeRef} style={style} className={`group flex cursor-pointer items-center gap-1.5 rounded-full border-2 bg-card py-1.5 pr-3 pl-1.5 text-sm font-bold text-foreground shadow-[inset_0_-3px_0_0_var(--lip)] transition-[border-color,transform] duration-300 ease-spring hover:-translate-y-0.5 hover:border-input ${isDragging ? "scale-105 border-primary" : "border-border"}`} />}>
+        <div {...attributes} {...listeners} aria-label={`Move ${day.name}`} className="grid size-6 cursor-grab touch-none place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-strawberry active:cursor-grabbing" onClick={(e) => e.stopPropagation()}>
+          <GripVertical className="size-3.5" />
         </div>
         <span>{day.name}</span>
-        {linkedTemplate && <LinkIcon className="h-3 w-3 text-primary ml-0.5" />}
-        <Settings2 className="h-3 w-3 text-muted-foreground opacity-50 group-hover:opacity-100 ml-1" />
+        {linkedTemplate && <LinkIcon className="size-3.5 text-strawberry" />}
+        <Settings2 className="size-3.5 text-muted-foreground transition-transform duration-500 ease-spring group-hover:rotate-45" />
       </DialogTrigger>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Configure Split Day</DialogTitle>
+          <DialogTitle>{day.name}</DialogTitle>
           <DialogDescription>
-            {day.name}
+            Pick a template to load when this day is up next.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4 space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Linked Template</label>
-            <p className="text-xs text-muted-foreground">Select a template to automatically load when this split day is Up Next.</p>
-            <Select 
-              value={day.default_template_id || "none"} 
+        <div className="flex flex-col gap-4 pb-1">
+          <div className="flex flex-col gap-2">
+            <label className="text-[0.8125rem] font-bold text-muted-foreground">Linked template</label>
+            <Select
+              value={day.default_template_id || "none"}
               onValueChange={handleLinkTemplate}
               disabled={isPending}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select a template" />
               </SelectTrigger>
               <SelectContent>
@@ -118,13 +117,13 @@ export function SplitCard({ split, templates }: SplitCardProps) {
         const oldIndex = items.findIndex((i) => i.id === active.id)
         const newIndex = items.findIndex((i) => i.id === over.id)
         const newItems = arrayMove(items, oldIndex, newIndex)
-        
+
         // Update DB
         const updates = newItems.map((item, index) => ({
           id: item.id,
           day_order: index + 1
         }))
-        
+
         updates.forEach(async (update) => {
           await supabase.from("split_days").update({ day_order: update.day_order }).eq("id", update.id)
         })
@@ -135,31 +134,32 @@ export function SplitCard({ split, templates }: SplitCardProps) {
   }
 
   return (
-    <Card className={`border-border bg-card transition-all ${split.is_active ? 'border-primary ring-1 ring-primary' : ''}`}>
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-xl font-bold">{split.name}</CardTitle>
+    <Card className={split.is_active ? "border-primary" : undefined}>
+      <CardHeader>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle className="text-title">{split.name}</CardTitle>
             {split.is_active && (
-              <Badge variant="secondary" className="mt-2 bg-primary/20 text-primary hover:bg-primary/30">
-                Active Plan
+              <Badge className="mt-2">
+                <Check /> Active plan
               </Badge>
             )}
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={`Delete ${split.name}`}
+            className="text-muted-foreground hover:text-destructive [--slide:var(--destructive-soft)]"
             onClick={handleDelete}
             disabled={isPending}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 />
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex flex-col gap-4">
         <div className="flex flex-wrap gap-2">
-          <DndContext 
+          <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
@@ -171,16 +171,16 @@ export function SplitCard({ split, templates }: SplitCardProps) {
             </SortableContext>
           </DndContext>
         </div>
-        
+
         {!split.is_active && (
-          <Button 
-            variant="outline" 
-            className="w-full" 
+          <Button
+            variant="outline"
+            className="w-full text-strawberry"
             onClick={handleSetActive}
             disabled={isPending}
           >
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            Set as Active
+            <CheckCircle2 />
+            Set as active
           </Button>
         )}
       </CardContent>

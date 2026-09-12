@@ -3,8 +3,10 @@
 import { useState, useTransition, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Check, Timer, X, ChevronLeft, Settings2 } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Check, Timer, X, ChevronLeft, Link2, Settings2 } from "lucide-react"
+import { KittyFace, KittyLoaf } from "@/components/kitty/kitty"
+import { Watchful } from "@/components/kitty/watchful"
 import { finishWorkout } from "@/app/workout/actions"
 import { useRouter } from "next/navigation"
 
@@ -151,50 +153,48 @@ export function ActiveWorkout({ session, initialWorkoutExercises, targetMuscles 
   }
 
   return (
-    <div className="flex flex-col p-4 space-y-6 max-w-lg mx-auto pb-32">
-      <header className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/")} className="shrink-0 -ml-2 text-muted-foreground hover:text-foreground">
-            <ChevronLeft className="w-6 h-6" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{session.name}</h1>
-            <div className="flex items-center gap-2 mt-1">
-              <div className="flex items-center text-sm font-mono text-primary bg-primary/10 px-2 py-0.5 rounded-full w-fit">
-                <Timer className="w-3.5 h-3.5 mr-1.5" />
-                <span>{formatTime(elapsedSeconds)}</span>
-              </div>
-              <Dialog open={isRestConfigOpen} onOpenChange={setIsRestConfigOpen}>
-                <DialogTrigger render={
-                  <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground">
-                    <Settings2 className="w-3 h-3 mr-1" /> {formatTime(defaultRestTime)} Rest
-                  </Button>
-                } />
-                <DialogContent className="max-w-xs rounded-xl bg-card border-border">
-                  <DialogHeader>
-                    <DialogTitle>Default Rest Timer</DialogTitle>
-                  </DialogHeader>
-                  <div className="py-4 space-y-4">
-                    <p className="text-sm text-muted-foreground">Set your default rest period between sets (MM:SS or MM).</p>
-                    <Input
-                      value={customRestInput}
-                      onChange={(e) => setCustomRestInput(e.target.value)}
-                      placeholder="e.g. 2:30"
-                      className="bg-background"
-                    />
-                    <Button onClick={applyRestTimerConfig} className="w-full">Apply</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
+    <div className="mx-auto flex max-w-md flex-col gap-5 px-4 pt-5 pb-24">
+      <header className="flex items-start gap-2">
+        <Button variant="ghost" size="icon" aria-label="Back to home" onClick={() => router.push("/")} className="-ml-2 shrink-0 text-muted-foreground">
+          <ChevronLeft className="size-6" />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display text-title">{session.name}</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 font-display text-sm text-primary-foreground tabular-nums">
+              <Timer className="size-4" />
+              {formatTime(elapsedSeconds)}
+            </span>
+            <Dialog open={isRestConfigOpen} onOpenChange={setIsRestConfigOpen}>
+              <DialogTrigger render={
+                <Button variant="outline" size="sm" className="rounded-full">
+                  <Settings2 /> {formatTime(defaultRestTime)} rest
+                </Button>
+              } />
+              <DialogContent className="max-w-xs">
+                <DialogHeader>
+                  <DialogTitle>Rest between sets</DialogTitle>
+                  <DialogDescription>Minutes and seconds, like 2:30, or just minutes.</DialogDescription>
+                </DialogHeader>
+                <div className="flex flex-col gap-3">
+                  <Input
+                    value={customRestInput}
+                    onChange={(e) => setCustomRestInput(e.target.value)}
+                    placeholder="e.g. 2:30"
+                    aria-label="Rest time"
+                  />
+                  <Button onClick={applyRestTimerConfig} size="lg" className="w-full">Apply</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
-        <Button onClick={handleFinish} disabled={isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
-          <Check className="w-4 h-4 mr-2" /> Finish
+        <Button onClick={handleFinish} disabled={isPending} size="lg" className="shrink-0 rounded-full px-4">
+          <Check /> Finish
         </Button>
       </header>
 
-      <div className="space-y-6">
+      <div className="flex flex-col gap-5">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -209,11 +209,11 @@ export function ActiveWorkout({ session, initialWorkoutExercises, targetMuscles 
               const { isLinkedToNext, isLinkedToPrev, hasNext, isSupersetFirst } = supersetFlags(workoutExercises, index)
 
               return (
-              <div key={we.id} className="relative mt-2">
+              <div key={we.id} className={isLinkedToPrev ? "relative -mt-5" : "relative mt-1"}>
                 {isSupersetFirst && (
-                   <div className="absolute -top-3 left-4 bg-primary text-primary-foreground text-[10px] uppercase font-bold px-2 py-0.5 rounded-full z-20 shadow-sm">
-                     SUPERSET
-                   </div>
+                  <span className="absolute -top-3 left-5 z-20 inline-flex items-center gap-1 rounded-full border-2 border-card bg-sky px-2.5 py-0.5 text-xs font-bold text-sky-foreground">
+                    <Link2 className="size-3.5" /> Superset
+                  </span>
                 )}
                 <div className="relative z-10">
                   <SortableExercise
@@ -238,26 +238,43 @@ export function ActiveWorkout({ session, initialWorkoutExercises, targetMuscles 
 
       <ExercisePicker targetMuscles={targetMuscles} onPick={addExercise} />
 
+      {workoutExercises.length === 0 && (
+        <div className="flex flex-col items-center gap-2 py-6 text-center">
+          <Watchful eyeLevel={0.6} className="w-20">
+            <KittyFace blink className="w-full" />
+          </Watchful>
+          <p className="font-display text-heading">Nothing logged yet</p>
+          <p className="text-sm font-bold text-muted-foreground">Add your first exercise to get going.</p>
+        </div>
+      )}
+
       {workoutExercises.length > 0 && <FeelingSelector value={feeling} onChange={setFeeling} />}
 
       {/* Floating Rest Timer */}
       {restTimeLeft !== null && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-card border border-border rounded-full shadow-lg shadow-black/50 p-2 flex items-center justify-between z-50">
-          <div className="flex items-center gap-3 pl-2">
-            <Timer className={`w-5 h-5 ${restTimeLeft > 0 ? 'text-primary animate-pulse' : 'text-destructive'}`} />
-            <span className="font-mono text-lg font-bold">
-              {formatTime(restTimeLeft)}
+        <div
+          role="timer"
+          className={`tile fixed inset-x-0 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-50 mx-auto flex w-[calc(100%-1.5rem)] max-w-sm animate-in items-center gap-3 rounded-full p-2 pl-3 duration-500 ease-spring fade-in slide-in-from-bottom-4 ${restTimeLeft === 0 ? "border-primary bg-accent" : ""}`}
+        >
+          {/* She naps while you rest and wakes when it's time to lift. */}
+          {restTimeLeft > 0 ? (
+            <KittyLoaf className="w-14 shrink-0" />
+          ) : (
+            <KittyFace mood="happy" className="w-11 shrink-0 animate-hop" />
+          )}
+          <div className="flex min-w-0 flex-1 flex-col leading-none">
+            <span className="font-display text-2xl tabular-nums">{formatTime(restTimeLeft)}</span>
+            <span className="mt-1 text-xs font-bold text-muted-foreground">
+              {restTimeLeft > 0 ? "Resting" : "Time for the next set"}
             </span>
           </div>
 
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-xs font-medium" onClick={() => startRestTimer(restTimeLeft + 30)}>
-              +30s
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground" onClick={() => setRestEndsAt(null)}>
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+          <Button variant="outline" size="sm" className="rounded-full" onClick={() => startRestTimer(restTimeLeft + 30)}>
+            +30s
+          </Button>
+          <Button variant="ghost" size="icon-sm" aria-label="Stop rest timer" className="rounded-full text-muted-foreground" onClick={() => setRestEndsAt(null)}>
+            <X />
+          </Button>
         </div>
       )}
     </div>

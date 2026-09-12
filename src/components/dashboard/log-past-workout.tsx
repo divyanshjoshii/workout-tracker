@@ -1,13 +1,14 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState, useTransition } from "react"
 import { createPastWorkout } from "@/app/actions"
 import { useRouter } from "next/navigation"
 import { History } from "lucide-react"
+import { AppIconFace, appIconClass } from "./app-icon"
 
 export function LogPastWorkout() {
   const [isOpen, setIsOpen] = useState(false)
@@ -35,55 +36,53 @@ export function LogPastWorkout() {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger className="w-full h-14 text-base font-semibold border border-border bg-card hover:bg-accent text-foreground flex items-center justify-center rounded-md">
-        <History className="mr-2 h-5 w-5" />
-        Log Past Workout
+      <DialogTrigger className={appIconClass}>
+        <AppIconFace icon={History} tone="bg-butter text-butter-foreground" />
+        Past workout
       </DialogTrigger>
-      
-      <DialogContent className="max-w-xs rounded-xl bg-background border-border">
+
+      <DialogContent className="max-w-xs">
         <DialogHeader>
-          <DialogTitle>Log Past Workout</DialogTitle>
+          <DialogTitle>Log a past workout</DialogTitle>
+          <DialogDescription>Add it now and fill in the sets next.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Workout Name</Label>
-            <Input 
-              id="name" 
-              name="name" 
-              placeholder="e.g. Pull Day" 
-              required 
-              className="bg-card border-border"
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="name">Workout name</Label>
+            <Input
+              id="name"
+              name="name"
+              placeholder="e.g. Pull Day"
+              required
               autoFocus
             />
           </div>
-          
-          <div className="space-y-2">
+
+          <div className="flex flex-col gap-2">
             <Label htmlFor="date">Date</Label>
-            <Input 
-              id="date" 
-              name="date" 
+            <Input
+              id="date"
+              name="date"
               type="date"
               defaultValue={today}
-              required 
-              className="bg-card border-border"
+              required
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="duration">Duration (minutes)</Label>
-            <Input 
-              id="duration" 
-              name="duration" 
+            <Input
+              id="duration"
+              name="duration"
               type="number"
-              placeholder="Optional" 
-              className="bg-card border-border"
+              placeholder="Optional"
             />
           </div>
-          
-          {error && <div className="text-sm text-destructive">{error}</div>}
-          
-          <Button type="submit" className="w-full" disabled={isPending}>
-            {isPending ? "Creating..." : "Create & Add Sets"}
+
+          {error && <p className="text-sm font-bold text-destructive">{error}</p>}
+
+          <Button type="submit" size="lg" className="w-full" disabled={isPending}>
+            {isPending ? "Creating..." : "Create & add sets"}
           </Button>
         </form>
       </DialogContent>

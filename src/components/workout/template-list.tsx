@@ -1,9 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Plus, GripVertical, Copy } from "lucide-react"
+import { GripVertical, Play } from "lucide-react"
 import { ClientDateInput } from "@/app/workout/client-date-input"
 import { startWorkoutFromTemplate, updateTemplateOrder } from "@/app/workout/actions"
 
@@ -30,16 +30,16 @@ function SortableTemplateItem({ template }: SortableTemplateItemProps) {
   }
 
   return (
-    <div ref={setNodeRef} style={style} className={`flex items-center gap-2 w-full ${isDragging ? 'opacity-70 scale-105' : ''}`}>
-      <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none p-2 shrink-0 bg-card border border-border rounded-md shadow-sm h-14 flex items-center justify-center">
-        <GripVertical className="h-5 w-5" />
+    <div ref={setNodeRef} style={style} className={`flex w-full items-center gap-2 transition-[opacity,scale] ${isDragging ? 'scale-[1.03] opacity-80' : ''}`}>
+      <div {...attributes} {...listeners} aria-label={`Move ${template.name}`} className="flex h-14 w-10 shrink-0 cursor-grab touch-none items-center justify-center rounded-2xl bg-muted text-muted-foreground transition-colors hover:text-strawberry active:cursor-grabbing">
+        <GripVertical className="size-5" />
       </div>
       
       <form action={startWorkoutFromTemplate.bind(null, template.id, null)} className="flex-1 min-w-0">
         <ClientDateInput />
-        <Button type="submit" variant="outline" className="w-full justify-between h-14 text-lg font-medium border-border hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
+        <Button type="submit" variant="outline" className="group h-14 w-full justify-between rounded-[1.25rem] pr-4 pl-4 text-base [--slide:var(--primary)]">
           <span className="truncate pr-2">{template.name}</span>
-          <Plus className="h-5 w-5 opacity-50 shrink-0" />
+          <Play fill="currentColor" className="size-4 shrink-0 text-strawberry transition-transform duration-500 ease-spring group-hover:translate-x-1" />
         </Button>
       </form>
     </div>
@@ -80,24 +80,12 @@ export function TemplateList({ initialTemplates }: { initialTemplates: Template[
 
   return (
     <>
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-border" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">Your Templates</span>
-        </div>
-      </div>
-
-      <Card className="border-border bg-card shadow-sm">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-primary flex items-center">
-            <Copy className="mr-2 h-5 w-5" />
-            Saved Templates
-          </CardTitle>
-          <p className="text-xs text-muted-foreground">Drag the handle to arrange your routines.</p>
+          <CardTitle>Saved templates</CardTitle>
+          <CardDescription>Drag the handle to arrange your routines.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="flex flex-col gap-2.5">
           <DndContext 
             sensors={sensors}
             collisionDetection={closestCenter}

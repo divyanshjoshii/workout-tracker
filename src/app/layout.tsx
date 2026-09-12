@@ -1,14 +1,29 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { ActiveWorkoutBanner } from "@/components/layout/active-workout-banner";
 import { ServiceWorker } from "@/components/service-worker";
 
-// Inter font is a modern clean sans-serif often used in gym-tech
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
+// Both faces are Japanese fonts from Google Fonts (SIL Open Font License 1.1).
+// Loaded through next/font/google they came as 240 slices, and 121 of them,
+// about 2 MB, were preloaded on every page. These are just their Latin slices,
+// which cover every character the app shows: three files, about 40 KB.
+
+// Titles, the clock and big numbers.
+const mochiy = localFont({
+  variable: "--font-mochiy",
+  src: "./fonts/mochiy-pop-one-latin-400.woff2",
+  weight: "400",
+});
+
+// Everything else.
+const zenMaru = localFont({
+  variable: "--font-zen-maru",
+  src: [
+    { path: "./fonts/zen-maru-gothic-latin-500.woff2", weight: "500" },
+    { path: "./fonts/zen-maru-gothic-latin-700.woff2", weight: "700" },
+  ],
 });
 
 export const metadata: Metadata = {
@@ -16,13 +31,16 @@ export const metadata: Metadata = {
   description: "Mobile-first PWA workout tracker",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Workout",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0B0F14",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FFF4F7" },
+    { media: "(prefers-color-scheme: dark)", color: "#1E1219" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -37,9 +55,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} dark h-full antialiased`}
+      className={`${mochiy.variable} ${zenMaru.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans bg-background text-foreground pb-16">
+      <body className="min-h-full flex flex-col pb-[calc(6.5rem+env(safe-area-inset-bottom))]">
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>

@@ -5,7 +5,7 @@ import { updateHallOfFame } from "@/app/actions"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Check, Edit2, Search, X } from "lucide-react"
+import { Check, Pencil, Search, X } from "lucide-react"
 
 type Exercise = { id: string, name: string, muscle_group: string }
 
@@ -69,14 +69,14 @@ export function HallOfFameEditor({ currentSelections }: { currentSelections: str
         loadExercises()
       }
     }}>
-      <DialogTrigger render={<Button variant="ghost" size="icon" className="h-6 w-6 text-yellow-600 dark:text-yellow-500 hover:text-yellow-700 hover:bg-yellow-500/20" />}>
-        <Edit2 className="h-3 w-3" />
+      <DialogTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Edit hall of fame" className="text-strawberry" />}>
+        <Pencil />
       </DialogTrigger>
       <DialogContent className="max-w-md max-h-[85vh] flex flex-col p-4">
         <DialogHeader>
-          <DialogTitle>Edit Hall of Fame</DialogTitle>
+          <DialogTitle>Hall of fame</DialogTitle>
           <DialogDescription>
-            Select up to 3 exercises to feature on your dashboard. ({selectedIds.length}/3 selected)
+            Pick up to three lifts to show off on your home screen. {selectedIds.length} of 3 picked.
           </DialogDescription>
         </DialogHeader>
 
@@ -86,10 +86,10 @@ export function HallOfFameEditor({ currentSelections }: { currentSelections: str
             const ex = exercises.find(e => e.id === id)
             if (!ex) return null
             return (
-              <div key={id} className="flex items-center gap-1 bg-yellow-500/20 text-yellow-700 dark:text-yellow-500 px-2 py-1 rounded-md text-xs font-medium">
+              <div key={id} className="flex items-center gap-1 rounded-full bg-primary py-1 pr-1.5 pl-3 text-xs font-bold text-primary-foreground">
                 {ex.name}
-                <button onClick={() => toggleSelection(id)} className="hover:text-foreground ml-1">
-                  <X className="h-3 w-3" />
+                <button onClick={() => toggleSelection(id)} aria-label={`Remove ${ex.name}`} className="grid size-5 place-items-center rounded-full transition-colors hover:bg-card/60">
+                  <X className="size-3" />
                 </button>
               </div>
             )
@@ -97,16 +97,16 @@ export function HallOfFameEditor({ currentSelections }: { currentSelections: str
         </div>
 
         <div className="relative mt-2">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="pointer-events-none absolute top-3.5 left-3.5 size-4 text-muted-foreground" />
           <Input 
             placeholder="Search exercises..." 
-            className="pl-9 bg-accent/50"
+            className="pl-10"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
 
-        <div className="flex-1 overflow-y-auto mt-2 space-y-1 pr-1 border rounded-md">
+        <div className="mt-2 flex-1 space-y-1 overflow-y-auto rounded-2xl border-2 p-1">
           {filteredExercises.length === 0 ? (
             <p className="text-center text-sm text-muted-foreground py-4">No exercises found.</p>
           ) : (
@@ -119,16 +119,16 @@ export function HallOfFameEditor({ currentSelections }: { currentSelections: str
                   key={ex.id}
                   disabled={isDisabled}
                   onClick={() => toggleSelection(ex.id)}
-                  className={`w-full flex items-center justify-between p-3 text-left hover:bg-accent transition-colors
-                    ${isSelected ? 'bg-yellow-500/10' : ''} 
-                    ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
+                  className={`flex w-full items-center justify-between rounded-xl p-3 text-left transition-colors hover:bg-accent
+                    ${isSelected ? 'bg-accent' : ''}
+                    ${isDisabled ? 'cursor-not-allowed opacity-50' : ''}
                   `}
                 >
                   <div>
-                    <div className={`text-sm font-medium ${isSelected ? 'text-yellow-600 dark:text-yellow-500' : ''}`}>{ex.name}</div>
+                    <div className={`text-sm font-bold ${isSelected ? 'text-strawberry' : ''}`}>{ex.name}</div>
                     <div className="text-xs text-muted-foreground">{ex.muscle_group}</div>
                   </div>
-                  {isSelected && <Check className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />}
+                  {isSelected && <Check className="size-4 text-strawberry" />}
                 </button>
               )
             })
@@ -136,7 +136,7 @@ export function HallOfFameEditor({ currentSelections }: { currentSelections: str
         </div>
 
         <DialogFooter className="mt-4">
-          <Button onClick={handleSave} disabled={isPending} className="w-full font-bold">
+          <Button onClick={handleSave} disabled={isPending} size="lg" className="w-full">
             {isPending ? "Saving..." : "Save Selection"}
           </Button>
         </DialogFooter>

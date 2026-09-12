@@ -6,9 +6,10 @@ import { CSS } from "@dnd-kit/utilities"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Check, Plus, Trash2, GripVertical, FileText, Weight } from "lucide-react"
+import { Check, CornerDownRight, FileText, GripVertical, Link2, Plus, Trash2, Trophy, Unlink, Weight } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { bestSet } from "@/lib/e1rm"
+import { cn } from "@/lib/utils"
 
 import type { WorkoutExercise } from "./types"
 
@@ -69,58 +70,61 @@ export function SortableExercise({
     }
   }, [we.exercises.id, we.session_id])
 
+  const linked = isLinkedToNext || isLinkedToPrev
+
   return (
-    <Card 
-      ref={setNodeRef} 
-      style={style} 
-      className={`bg-card 
-        ${isDragging ? 'shadow-xl ring-2 ring-primary/50 opacity-90' : ''}
-        ${isLinkedToNext ? 'rounded-b-none border-b-0' : 'border-border border'}
-        ${isLinkedToPrev ? 'rounded-t-none border-t-0' : 'border-border border'}
-        ${isLinkedToNext || isLinkedToPrev ? 'border-primary/30 border-l-4' : ''}
-      `}
+    <Card
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "gap-3 py-4",
+        isDragging && "scale-[1.02] opacity-90 shadow-xl ring-4 ring-ring/25",
+        linked && "bg-[color-mix(in_oklab,var(--sky)_32%,var(--card))]",
+        isLinkedToNext && "rounded-b-none border-b-0 shadow-none",
+        isLinkedToPrev && "rounded-t-none border-t-2 border-t-[color-mix(in_oklab,var(--sky-foreground)_18%,transparent)] border-dashed"
+      )}
     >
-      {isLinkedToPrev && <div className="h-px bg-border/50 mx-4 mt-2"></div>}
-      <CardHeader className="pb-2 flex flex-row items-center space-y-0 p-3 sm:p-6">
-        <div {...attributes} {...listeners} className="mr-2 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none">
-          <GripVertical className="h-5 w-5" />
+      <CardHeader className="flex flex-row items-start gap-2 px-3 sm:px-5">
+        <div {...attributes} {...listeners} aria-label={`Move ${we.exercises.name}`} className="mt-0.5 grid size-8 shrink-0 cursor-grab touch-none place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-strawberry active:cursor-grabbing">
+          <GripVertical className="size-5" />
         </div>
-        <div className="flex-1">
-          <CardTitle className="text-lg text-primary flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span>{we.exercises.name}</span>
-              {hasNext && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className={`h-6 text-[10px] px-2 rounded-full border ${isLinkedToNext ? 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/20' : 'text-muted-foreground border-border hover:text-foreground'}`}
-                  onClick={onToggleLink}
-                >
-                  {isLinkedToNext ? '🔗 Unlink Superset' : '🔗 Superset Below'}
-                </Button>
-              )}
-            </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => removeExercise(we.id)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </CardTitle>
-          {pr && pr.weight && (
-            <div className="text-xs text-muted-foreground mt-1">
-              🏆 All-Time PR: <span className="font-semibold text-foreground">{pr.weight}kg x {pr.reps}</span> {pr.e1rm && <span className="font-normal opacity-80">({pr.e1rm}kg e1RM)</span>}
-            </div>
-          )}
+        <div className="min-w-0 flex-1">
+          <CardTitle className="text-[1.0625rem] leading-snug">{we.exercises.name}</CardTitle>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {pr && pr.weight && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-butter px-2.5 py-0.5 text-xs font-bold text-butter-foreground">
+                <Trophy className="size-3.5" />
+                Best {pr.weight} kg × {pr.reps}
+                {pr.e1rm && <span className="font-medium opacity-80">({pr.e1rm} kg e1RM)</span>}
+              </span>
+            )}
+            {hasNext && (
+              <Button
+                variant={isLinkedToNext ? "secondary" : "outline"}
+                size="xs"
+                className="rounded-full"
+                onClick={onToggleLink}
+              >
+                {isLinkedToNext ? <Unlink /> : <Link2 />}
+                {isLinkedToNext ? "Unlink superset" : "Superset below"}
+              </Button>
+            )}
+          </div>
         </div>
+        <Button variant="ghost" size="icon-sm" aria-label={`Remove ${we.exercises.name}`} className="text-muted-foreground hover:text-destructive [--slide:var(--destructive-soft)]" onClick={() => removeExercise(we.id)}>
+          <Trash2 />
+        </Button>
       </CardHeader>
-      
-      <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
-        <div className="space-y-3">
-          <div className="grid grid-cols-[2rem_1fr_1fr_2.5rem] gap-2 text-xs font-semibold text-muted-foreground uppercase text-center mb-2">
+
+      <CardContent className="px-3 sm:px-5">
+        <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-[2.25rem_1fr_1fr_2.75rem] gap-2 text-center text-[0.6875rem] font-bold text-muted-foreground sm:grid-cols-[2.25rem_1fr_1fr_2.75rem_5rem]">
             <span>Set</span>
             <span>kg</span>
             <span>Reps</span>
             <span>Done</span>
           </div>
-          
+
           {we.workout_sets
             .sort((a, b) => {
               if (a.set_number !== b.set_number) return a.set_number - b.set_number
@@ -131,106 +135,118 @@ export function SortableExercise({
               const isCompleted = completedSets[set.id]
               const lastSet = lastSessionSets[idx]
               const isDropset = set.set_type === "dropset"
-              
+
               return (
-              <div key={set.id} className={`space-y-1 ${isDropset ? 'pl-4 sm:pl-8 border-l-2 border-primary/20 ml-2 mt-1 relative' : ''}`}>
-                {isDropset && <div className="absolute top-1/2 -left-2 w-2 h-px bg-primary/20 -translate-y-1/2"></div>}
-                <div className={`grid grid-cols-[2rem_1fr_1fr_2.5rem] gap-2 items-center transition-colors rounded-md p-1 ${isCompleted ? 'bg-primary/5' : ''}`}>
-                  <div className="relative text-center font-medium bg-secondary/20 text-secondary rounded-md h-9 flex items-center justify-center text-sm cursor-pointer group" onClick={() => {
-                    const notes = prompt("Enter notes for this set:", set.notes || "")
-                    if (notes !== null) updateSet(we.id, set.id, "notes", notes)
-                  }}>
-                    {isDropset ? "↳" : set.set_number}
-                    {set.notes && <FileText className="absolute -top-1 -right-1 w-3 h-3 text-primary" />}
-                    <span className="sr-only">Add Note</span>
-                  </div>
-                  
+              <div key={set.id} className={cn("flex flex-col gap-1", isDropset && "ml-3 border-l-2 border-dashed border-input pl-3")}>
+                <div className={cn(
+                  "grid grid-cols-[2.25rem_1fr_1fr_2.75rem] items-center gap-2 rounded-2xl p-1 transition-colors duration-300 sm:grid-cols-[2.25rem_1fr_1fr_2.75rem_5rem]",
+                  isCompleted && "bg-accent"
+                )}>
+                  <button
+                    type="button"
+                    aria-label={set.notes ? `Edit note: ${set.notes}` : "Add a note"}
+                    className="press relative grid h-10 place-items-center rounded-xl bg-sky font-display text-sm text-sky-foreground"
+                    onClick={() => {
+                      const notes = prompt("Enter notes for this set:", set.notes || "")
+                      if (notes !== null) updateSet(we.id, set.id, "notes", notes)
+                    }}
+                  >
+                    {isDropset ? <CornerDownRight className="size-4" /> : set.set_number}
+                    {set.notes && <FileText className="absolute -top-1 -right-1 size-3.5 rounded-sm bg-card text-strawberry" />}
+                  </button>
+
                   <div className="relative flex items-center">
                     <Input
                       type="number"
+                      aria-label="Weight in kg"
                       placeholder={lastSet && lastSet.weight !== null ? String(lastSet.weight) : "--"}
                       value={set.is_bodyweight ? "" : (set.weight ?? "")}
                       disabled={!!set.is_bodyweight}
                       onChange={(e) => updateSet(we.id, set.id, "weight", e.target.value)}
-                      className={`h-9 pr-6 text-center bg-background border-border placeholder:text-muted-foreground/40 ${isCompleted ? 'opacity-70 text-primary border-primary/50' : ''}`}
+                      className={cn("h-10 rounded-xl pr-7 text-center", isCompleted && "border-primary bg-card text-strawberry")}
                     />
-                    <button 
+                    <button
+                      type="button"
                       onClick={() => updateSet(we.id, set.id, "is_bodyweight", !set.is_bodyweight)}
-                      className={`absolute right-1 p-1 rounded-sm ${set.is_bodyweight ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:bg-accent'}`}
+                      className={cn(
+                        "absolute right-1.5 z-10 grid size-6 place-items-center rounded-lg transition-colors",
+                        set.is_bodyweight ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent hover:text-strawberry"
+                      )}
+                      aria-pressed={!!set.is_bodyweight}
                       title="Bodyweight"
                     >
-                      <Weight className="w-3 h-3" />
+                      <Weight className="size-3.5" />
                     </button>
-                    {set.is_bodyweight && <div className="absolute inset-0 flex items-center justify-center font-bold text-primary pointer-events-none bg-background/80 rounded-md">BW</div>}
+                    {set.is_bodyweight && <div className="pointer-events-none absolute inset-0 grid place-items-center rounded-xl bg-accent pr-6 font-display text-sm text-strawberry">BW</div>}
                   </div>
-                  
+
                   <Input
                     type="number"
+                    aria-label="Reps"
                     placeholder={lastSet && lastSet.reps ? String(lastSet.reps) : "--"}
                     value={set.reps || ""}
                     onChange={(e) => updateSet(we.id, set.id, "reps", e.target.value)}
-                    className={`h-9 text-center bg-background border-border placeholder:text-muted-foreground/40 ${isCompleted ? 'opacity-70 text-primary border-primary/50' : ''}`}
+                    className={cn("h-10 rounded-xl text-center", isCompleted && "border-primary bg-card text-strawberry")}
                   />
-                  
-                  <div className="flex flex-col gap-1 sm:flex-row">
+
+                  <div className="flex flex-col gap-1">
                     <Button
-                      variant={isCompleted ? "default" : "secondary"}
+                      variant={isCompleted ? "default" : "outline"}
                       size="icon"
-                      className={`h-9 w-full sm:w-9 ${isCompleted ? 'bg-primary text-primary-foreground' : ''}`}
+                      aria-label={isCompleted ? "Mark set not done" : "Mark set done"}
+                      aria-pressed={!!isCompleted}
+                      className={cn("h-10 w-full rounded-xl", isCompleted && "animate-hop")}
                       onClick={() => toggleSetComplete(set.id)}
                     >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                    {/* Mobile delete button under check */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-full sm:hidden text-muted-foreground hover:text-destructive"
-                      onClick={() => removeSet(we.id, set.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
+                      <Check className={cn("size-5", !isCompleted && "text-muted-foreground")} />
                     </Button>
                   </div>
 
-                  <div className="hidden sm:flex gap-1">
+                  <div className="hidden gap-1 sm:flex">
                     {!isDropset && (
                       <Button
                         variant="ghost"
                         size="icon"
-                        title="Add Dropset"
-                        className="h-9 w-9 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                        title="Add dropset"
+                        aria-label="Add dropset"
+                        className="text-muted-foreground hover:text-strawberry"
                         onClick={() => addSet(we.id, set.set_number)}
                       >
-                        <Plus className="h-4 w-4" />
+                        <Plus />
                       </Button>
                     )}
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      aria-label="Remove set"
+                      className="text-muted-foreground hover:text-destructive [--slide:var(--destructive-soft)]"
                       onClick={() => removeSet(we.id, set.id)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 />
                     </Button>
                   </div>
                 </div>
-                {/* Mobile / Extra controls */}
-                <div className="sm:hidden flex items-center gap-2 pl-10 pr-2">
+                {/* Phone controls under the row */}
+                <div className="flex items-center gap-1 pl-11 sm:hidden">
                   {!isDropset && (
-                    <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2 ml-1" onClick={() => addSet(we.id, set.set_number)}>+ Drop</Button>
+                    <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => addSet(we.id, set.set_number)}>
+                      <CornerDownRight /> Drop set
+                    </Button>
                   )}
-                  {set.notes && <span className="text-[10px] text-muted-foreground italic line-clamp-1">{set.notes}</span>}
+                  <Button variant="ghost" size="xs" aria-label="Remove set" className="text-muted-foreground hover:text-destructive [--slide:var(--destructive-soft)]" onClick={() => removeSet(we.id, set.id)}>
+                    <Trash2 /> Remove
+                  </Button>
+                  {set.notes && <span className="line-clamp-1 text-xs font-medium text-muted-foreground italic">{set.notes}</span>}
                 </div>
               </div>
             )})}
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full mt-2 border-border border-dashed text-muted-foreground hover:text-foreground"
+
+          <Button
+            variant="outline"
+            className="mt-1 h-11 w-full border-dashed border-input text-strawberry"
             onClick={() => addSet(we.id)}
           >
-            <Plus className="h-4 w-4 mr-2" /> Add Set
+            <Plus /> Add set
           </Button>
         </div>
       </CardContent>

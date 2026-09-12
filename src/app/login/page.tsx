@@ -4,8 +4,8 @@ import { login, signup } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dumbbell } from "lucide-react";
+import { KittySit } from "@/components/kitty/kitty";
+import { Watchful } from "@/components/kitty/watchful";
 import { useState } from "react";
 
 export default function LoginPage() {
@@ -38,88 +38,78 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background p-4">
-      <Card className="w-full max-w-sm border-border bg-card shadow-2xl">
-        <CardHeader className="space-y-3 text-center">
-          <div className="flex justify-center mb-2">
-            <div className="p-3 bg-primary/10 rounded-full">
-              <Dumbbell className="w-8 h-8 text-primary" />
-            </div>
-          </div>
-          <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
-            Workout Tracker
-          </CardTitle>
-          <CardDescription className="text-muted-foreground">
+    <div className="flex min-h-[calc(100dvh-6.5rem)] items-center justify-center px-4 pt-28 pb-4">
+      <div className="tile relative w-full max-w-sm p-6 pt-7">
+        <Watchful className="absolute -top-[101px] left-1/2 w-[96px] -translate-x-1/2">
+          <KittySit className="w-full" />
+        </Watchful>
+
+        <div className="text-center">
+          <h1 className="font-display text-title">Workout Tracker</h1>
+          <p className="mt-2 text-sm font-bold text-muted-foreground">
             {mode === "signup"
               ? "Create an account to start tracking."
               : "Sign in to your account."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-foreground">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="m@example.com"
-                required
-                autoComplete="email"
-                className="bg-background border-border text-foreground focus-visible:ring-primary"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-foreground">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                required
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                className="bg-background border-border text-foreground focus-visible:ring-primary"
-              />
-            </div>
+          </p>
+        </div>
 
-            {error && (
-              <div className="text-sm text-destructive font-medium">
-                {error}
-                {mode === "login" && (
-                  <div className="text-muted-foreground font-normal mt-1">
-                    Check the email spelling. If you have never signed up on this
-                    address, create an account below instead.
-                  </div>
-                )}
-              </div>
-            )}
-
-            {message && (
-              <div className="text-sm text-primary font-medium">{message}</div>
-            )}
-
-            <Button
-              type="submit"
-              disabled={isPending}
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
-            >
-              {isPending
-                ? (mode === "signup" ? "Creating account..." : "Signing in...")
-                : (mode === "signup" ? "Create Account" : "Sign In")}
-            </Button>
-          </form>
-
-          <div className="text-center text-sm text-muted-foreground mt-4">
-            {mode === "signup" ? "Already have an account?" : "No account yet?"}{" "}
-            <button
-              type="button"
-              onClick={() => switchMode(mode === "signup" ? "login" : "signup")}
-              className="text-primary font-medium hover:underline"
-            >
-              {mode === "signup" ? "Sign in" : "Create one"}
-            </button>
+        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="m@example.com"
+              required
+              autoComplete="email"
+            />
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              required
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            />
+          </div>
+
+          {error && (
+            <div role="alert" className="rounded-2xl bg-destructive-soft p-3 text-sm font-bold text-destructive">
+              {error}
+              {mode === "login" && (
+                <div className="mt-1 font-medium text-foreground">
+                  Check the email spelling. If you have never signed up on this
+                  address, create an account below instead.
+                </div>
+              )}
+            </div>
+          )}
+
+          {message && (
+            <div role="status" className="rounded-2xl bg-mint p-3 text-sm font-bold text-mint-foreground">{message}</div>
+          )}
+
+          <Button type="submit" size="lg" disabled={isPending} className="mt-1 w-full">
+            {isPending
+              ? (mode === "signup" ? "Creating account..." : "Signing in...")
+              : (mode === "signup" ? "Create account" : "Sign in")}
+          </Button>
+        </form>
+
+        <p className="mt-5 text-center text-sm font-bold text-muted-foreground">
+          {mode === "signup" ? "Already have an account?" : "No account yet?"}{" "}
+          <button
+            type="button"
+            onClick={() => switchMode(mode === "signup" ? "login" : "signup")}
+            className="text-strawberry underline-offset-4 hover:underline"
+          >
+            {mode === "signup" ? "Sign in" : "Create one"}
+          </button>
+        </p>
+      </div>
     </div>
   );
 }

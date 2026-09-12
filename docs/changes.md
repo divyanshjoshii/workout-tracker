@@ -138,3 +138,24 @@
   to 0.8 seconds each way.
 - Uninstalled `@ducanh2912/next-pwa`, which nothing imported. The lockfile lost
   219 packages and no other package changed version.
+
+- Replaced the dark, green, minimal look with a cute one the owner asked for:
+  pink with Hello Kitty's feel, phone home-screen widgets, motion on press and
+  hover, and a clear type hierarchy. The design record is `PRODUCT.md`.
+- The mascot is an original kitty, not Sanrio's Hello Kitty, which is a
+  trademarked character in a public repository. She is inline SVG, a few
+  kilobytes and no requests. `Watchful` sends the pointer position straight to
+  CSS variables, so her eyes follow it without React re-rendering, and she
+  stays still for people who ask their phone for less motion.
+- The first build preloaded 121 font files, about 2 MB, on every page. Both
+  faces are Japanese fonts that Google serves in roughly 120 slices, and
+  next/font marked most of them for preload. Only their Latin slices are now
+  bundled, through next/font/local: three files, 40 KB, and the stylesheet went
+  from about 108 KB gzipped to 12 KB.
+- Startup JavaScript grew by 3 to 4 KB per page for the clock and the kitty.
+- Light and night themes follow the phone's setting. The `dark` class that
+  forced dark mode is gone.
+- Sign out is only in Settings now. It was on both Home and Settings, and the
+  kitty on the clock sits where the sign-out button was.
+- New icons were rendered from the kitty's face with the image renderer bundled
+  in Next, replacing the green W. `favicon.ico` holds a single 48px PNG.

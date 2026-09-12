@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { Timer, ArrowRight } from "lucide-react"
+import { KittyFace } from "@/components/kitty/kitty"
+import { Watchful } from "@/components/kitty/watchful"
 
 export function ActiveWorkoutBanner() {
   const pathname = usePathname()
@@ -80,23 +82,24 @@ export function ActiveWorkoutBanner() {
   }
 
   return (
-    <div className="fixed bottom-16 left-0 right-0 z-50 px-4 pb-4 animate-in slide-in-from-bottom-2 fade-in duration-300">
-      <Link href={`/workout/${activeSessionId}`}>
-        <div className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-lg border border-primary/20 p-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-background/20 p-2 rounded-full">
-              <Timer className="w-5 h-5" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-medium opacity-80 uppercase tracking-wider">Active Workout</span>
-              <span className="font-bold text-sm line-clamp-1">{sessionName}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-mono font-bold text-lg">{formatTime(elapsedSeconds)}</span>
-            <ArrowRight className="w-4 h-4 opacity-70" />
-          </div>
-        </div>
+    <div className="fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-50 mx-auto w-[calc(100%-1.5rem)] max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500 ease-spring">
+      <Link
+        href={`/workout/${activeSessionId}`}
+        className="tile press slide-fill group relative flex items-center gap-3 border-[rgb(200_51_111/0.25)] bg-primary p-2.5 pr-4 text-primary-foreground shadow-[inset_0_-4px_0_0_rgb(200_51_111/0.3),0_12px_24px_-12px_var(--shadow)] [--slide:#FFB9D4]"
+      >
+        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-card">
+          <Watchful eyeLevel={0.6} className="w-9">
+            <KittyFace blink className="w-full" />
+          </Watchful>
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="line-clamp-1 font-bold">{sessionName}</span>
+          <span className="flex items-center gap-1 text-xs font-bold opacity-80">
+            <Timer className="size-3.5" /> In progress
+          </span>
+        </span>
+        <span className="font-display text-xl tabular-nums">{formatTime(elapsedSeconds)}</span>
+        <ArrowRight className="size-4 transition-transform duration-300 ease-spring group-hover:translate-x-1" />
       </Link>
     </div>
   )

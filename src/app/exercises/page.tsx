@@ -1,5 +1,8 @@
 import { requireUser } from "@/lib/supabase/server"
 import { ExerciseListClient } from "./exercise-list-client"
+import { PageHeader } from "@/components/layout/page-header"
+import { KittyFace } from "@/components/kitty/kitty"
+import { Watchful } from "@/components/kitty/watchful"
 
 export default async function ExercisesPage() {
   const { supabase, user } = await requireUser()
@@ -21,14 +24,19 @@ export default async function ExercisesPage() {
   const favoriteIds = favorites?.map(f => f.exercise_id) || []
 
   return (
-    <div className="flex flex-col p-4 max-w-lg mx-auto">
-      <header className="py-4">
-        <h1 className="text-2xl font-bold tracking-tight">Exercises</h1>
-        <p className="text-muted-foreground text-sm">Browse and manage your exercises</p>
-      </header>
+    <div className="mx-auto flex max-w-md flex-col gap-5 px-4 pb-6">
+      <PageHeader
+        title="Exercises"
+        description="Browse and manage your exercises."
+        aside={
+          <Watchful eyeLevel={0.6} className="w-16 shrink-0">
+            <KittyFace blink className="w-full" />
+          </Watchful>
+        }
+      />
 
-      <ExerciseListClient 
-        initialExercises={exercises || []} 
+      <ExerciseListClient
+        initialExercises={exercises || []}
         favoriteExerciseIds={favoriteIds}
         userId={user.id}
       />

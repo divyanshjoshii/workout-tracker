@@ -2,6 +2,8 @@ import { requireUser } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Download, LogOut, Smartphone, User } from "lucide-react"
+import { PageHeader } from "@/components/layout/page-header"
+import { KittyLoaf } from "@/components/kitty/kitty"
 
 export default async function SettingsPage() {
   const { supabase, user } = await requireUser()
@@ -16,46 +18,47 @@ export default async function SettingsPage() {
   const displayName = profile?.display_name || "Athlete"
 
   return (
-    <div className="flex flex-col p-4 space-y-6 max-w-lg mx-auto pb-24">
-      <header className="mt-4">
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground text-sm">Manage your account and app preferences</p>
-      </header>
+    <div className="mx-auto flex max-w-md flex-col gap-5 px-4 pb-6">
+      <PageHeader
+        title="Settings"
+        description="Manage your account and app preferences."
+        aside={<KittyLoaf className="w-24 shrink-0" />}
+      />
 
       {/* Account Info */}
-      <Card className="border-border bg-card">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg flex items-center">
-            <User className="w-5 h-5 mr-2 text-primary" />
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2.5">
+            <IconChip><User /></IconChip>
             Account
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <div className="text-sm font-medium text-muted-foreground">Email</div>
-            <div className="font-medium text-foreground">{user.email}</div>
-          </div>
-          <div>
-            <div className="text-sm font-medium text-muted-foreground">Name</div>
-            <div className="font-medium text-foreground">{displayName}</div>
-          </div>
-          
-          <div className="pt-2">
-            <form action="/auth/signout" method="post">
-              <Button variant="destructive" className="w-full bg-destructive/20 text-destructive hover:bg-destructive hover:text-destructive-foreground border-none">
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
-              </Button>
-            </form>
-          </div>
+        <CardContent className="flex flex-col gap-3">
+          <dl className="flex flex-col gap-2">
+            <div className="rounded-2xl bg-muted/70 px-4 py-3">
+              <dt className="text-xs font-bold text-muted-foreground">Email</dt>
+              <dd className="mt-0.5 truncate font-bold">{user.email}</dd>
+            </div>
+            <div className="rounded-2xl bg-muted/70 px-4 py-3">
+              <dt className="text-xs font-bold text-muted-foreground">Name</dt>
+              <dd className="mt-0.5 font-bold">{displayName}</dd>
+            </div>
+          </dl>
+
+          <form action="/auth/signout" method="post">
+            <Button variant="destructive" size="lg" className="w-full">
+              <LogOut />
+              Sign out
+            </Button>
+          </form>
         </CardContent>
       </Card>
 
       {/* Data Management */}
-      <Card className="border-border bg-card">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg flex items-center">
-            <Download className="w-5 h-5 mr-2 text-primary" />
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2.5">
+            <IconChip><Download /></IconChip>
             Data
           </CardTitle>
           <CardDescription>
@@ -64,7 +67,7 @@ export default async function SettingsPage() {
         </CardHeader>
         <CardContent>
           <form action="/api/export" method="GET">
-            <Button variant="secondary" type="submit" className="w-full font-medium">
+            <Button variant="secondary" size="lg" type="submit" className="w-full">
               Export to CSV
             </Button>
           </form>
@@ -72,39 +75,47 @@ export default async function SettingsPage() {
       </Card>
 
       {/* PWA App Install Instructions */}
-      <Card className="border-border bg-card">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg flex items-center">
-            <Smartphone className="w-5 h-5 mr-2 text-primary" />
-            Install App
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2.5">
+            <IconChip><Smartphone /></IconChip>
+            Install app
           </CardTitle>
           <CardDescription>
             Get the full native experience by adding this app to your home screen. It works completely offline!
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 text-sm text-muted-foreground">
-          <div className="bg-muted/30 p-3 rounded-md">
-            <p className="font-medium text-foreground mb-1">iOS (Safari)</p>
-            <ol className="list-decimal pl-4 space-y-1">
+        <CardContent className="flex flex-col gap-2.5 text-sm">
+          <div className="rounded-2xl bg-muted/70 p-4">
+            <p className="font-display text-base">iOS (Safari)</p>
+            <ol className="mt-2 list-decimal space-y-1 pl-4 font-medium text-muted-foreground marker:font-bold marker:text-strawberry">
               <li>Tap the <span className="font-bold text-foreground">Share</span> icon at the bottom of Safari.</li>
               <li>Scroll down and tap <span className="font-bold text-foreground">Add to Home Screen</span>.</li>
             </ol>
           </div>
-          
-          <div className="bg-muted/30 p-3 rounded-md">
-            <p className="font-medium text-foreground mb-1">Android (Chrome)</p>
-            <ol className="list-decimal pl-4 space-y-1">
+
+          <div className="rounded-2xl bg-muted/70 p-4">
+            <p className="font-display text-base">Android (Chrome)</p>
+            <ol className="mt-2 list-decimal space-y-1 pl-4 font-medium text-muted-foreground marker:font-bold marker:text-strawberry">
               <li>Tap the <span className="font-bold text-foreground">Menu</span> icon (three dots) in Chrome.</li>
               <li>Tap <span className="font-bold text-foreground">Install App</span> or <span className="font-bold text-foreground">Add to Home screen</span>.</li>
             </ol>
           </div>
         </CardContent>
       </Card>
-      
-      <div className="text-center text-xs text-muted-foreground pt-4 pb-8">
-        Workout Tracker MVP v1.0.0<br/>
+
+      <p className="pt-2 pb-4 text-center text-xs font-bold text-muted-foreground">
+        Workout Tracker MVP v1.0.0<br />
         Built with Next.js, Supabase, and Tailwind CSS.
-      </div>
+      </p>
     </div>
+  )
+}
+
+function IconChip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground [&_svg]:size-[18px]">
+      {children}
+    </span>
   )
 }
