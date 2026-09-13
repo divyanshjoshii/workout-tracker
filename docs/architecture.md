@@ -118,8 +118,8 @@ Every table hangs off `profiles`, and RLS checks ownership through that chain.
 `exercises` is the one shared table: everyone reads it, nobody owns it.
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"background": "#0B0F14", "primaryColor": "#151A21", "primaryTextColor": "#F8FAFC", "primaryBorderColor": "#22C55E", "lineColor": "#22C55E", "secondaryColor": "#1E293B", "tertiaryColor": "#0B0F14", "textColor": "#F8FAFC", "edgeLabelBackground": "#0B0F14", "attributeBackgroundColorOdd": "#151A21", "attributeBackgroundColorEven": "#0B0F14", "rowOdd": "#151A21", "rowEven": "#0B0F14", "relationColor": "#22C55E", "relationLabelBackground": "#0B0F14", "relationLabelColor": "#F8FAFC"}}}%%
-%% palette 219897bf
+%%{init: {"theme":"base","themeVariables":{"background":"#FFFFFF","primaryColor":"#FFFFFF","primaryTextColor":"#43222F","primaryBorderColor":"#FF9EC4","lineColor":"#FF9EC4","secondaryColor":"#FFF3F8","tertiaryColor":"#FFFFFF","textColor":"#43222F","edgeLabelBackground":"#FFFFFF","clusterBkg":"#FFFFFF","clusterBorder":"#D9D3D5","titleColor":"#43222F","rowOdd":"#FFFFFF","rowEven":"#F4F2F3","attributeBackgroundColorOdd":"#FFFFFF","attributeBackgroundColorEven":"#F4F2F3","actorBkg":"#FFFFFF","actorBorder":"#FF9EC4","actorTextColor":"#43222F","actorLineColor":"#AA9CA1","signalColor":"#FF9EC4","signalTextColor":"#43222F","labelBoxBkgColor":"#FFFFFF","labelBoxBorderColor":"#FF9EC4","labelTextColor":"#43222F","loopTextColor":"#43222F","noteBkgColor":"#FFF0F6","noteTextColor":"#43222F","noteBorderColor":"#FF9EC4","activationBkgColor":"#FF9EC4","activationBorderColor":"#FF9EC4","relationColor":"#E8588F","relationLabelBackground":"#FFFFFF","relationLabelColor":"#43222F"}}}%%
+%% palette 24b50cd8
 erDiagram
     profiles ||--o{ splits : owns
     profiles ||--o{ workout_sessions : logs
@@ -213,19 +213,19 @@ What happens between opening the dashboard and seeing it. Everything inside a
 `par` block runs at the same time.
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"actorBkg": "#151A21", "actorBorder": "#22C55E", "actorTextColor": "#F8FAFC", "actorLineColor": "#475569", "signalColor": "#22C55E", "signalTextColor": "#F8FAFC", "labelBoxBkgColor": "#151A21", "labelBoxBorderColor": "#38BDF8", "labelTextColor": "#F8FAFC", "loopTextColor": "#F8FAFC", "noteBkgColor": "#1E293B", "noteTextColor": "#F8FAFC", "noteBorderColor": "#38BDF8", "activationBkgColor": "#22C55E", "activationBorderColor": "#22C55E"}}}%%
-%% palette 219897bf
+%%{init: {"theme":"base","themeVariables":{"background":"#FFFFFF","primaryColor":"#FFFFFF","primaryTextColor":"#43222F","primaryBorderColor":"#FF9EC4","lineColor":"#FF9EC4","secondaryColor":"#FFF3F8","tertiaryColor":"#FFFFFF","textColor":"#43222F","edgeLabelBackground":"#FFFFFF","clusterBkg":"#FFFFFF","clusterBorder":"#D9D3D5","titleColor":"#43222F","rowOdd":"#FFFFFF","rowEven":"#F4F2F3","attributeBackgroundColorOdd":"#FFFFFF","attributeBackgroundColorEven":"#F4F2F3","actorBkg":"#FFFFFF","actorBorder":"#FF9EC4","actorTextColor":"#43222F","actorLineColor":"#AA9CA1","signalColor":"#FF9EC4","signalTextColor":"#43222F","labelBoxBkgColor":"#FFFFFF","labelBoxBorderColor":"#FF9EC4","labelTextColor":"#43222F","loopTextColor":"#43222F","noteBkgColor":"#FFF0F6","noteTextColor":"#43222F","noteBorderColor":"#FF9EC4","activationBkgColor":"#FF9EC4","activationBorderColor":"#FF9EC4"}}}%%
+%% palette 24b50cd8
 sequenceDiagram
     participant P as Phone
     participant D as Dashboard<br/>server component
     participant DB as Postgres<br/>RLS enforced
 
-    rect rgb(21, 26, 33)
+    rect rgb(255, 255, 255)
         P->>D: open dashboard
         Note over D: requireUser() checks the session<br/>signature here, no network call
     end
 
-    rect rgb(16, 36, 26)
+    rect rgb(252, 232, 239)
         par Round 1, all at once
             D->>DB: profile
         and
@@ -240,7 +240,7 @@ sequenceDiagram
         DB-->>D: five results
     end
 
-    rect rgb(14, 30, 44)
+    rect rgb(232, 241, 249)
         par Round 2, all at once
             D->>DB: split days
         and
@@ -251,7 +251,7 @@ sequenceDiagram
         DB-->>D: rows
     end
 
-    rect rgb(28, 22, 46)
+    rect rgb(251, 243, 226)
         opt Round 3, only when the split day links a template
             D->>DB: matching template
             DB-->>D: row
@@ -268,8 +268,8 @@ last.
 A session has no status column. Whether it is finished comes down to one field.
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"background": "#0B0F14", "primaryColor": "#151A21", "primaryTextColor": "#F8FAFC", "primaryBorderColor": "#22C55E", "lineColor": "#22C55E", "textColor": "#F8FAFC", "edgeLabelBackground": "#0B0F14"}}}%%
-%% palette 219897bf
+%%{init: {"theme":"base","themeVariables":{"background":"#FFFFFF","primaryColor":"#FFFFFF","primaryTextColor":"#43222F","primaryBorderColor":"#FF9EC4","lineColor":"#FF9EC4","secondaryColor":"#FFF3F8","tertiaryColor":"#FFFFFF","textColor":"#43222F","edgeLabelBackground":"#FFFFFF","clusterBkg":"#FFFFFF","clusterBorder":"#D9D3D5","titleColor":"#43222F","rowOdd":"#FFFFFF","rowEven":"#F4F2F3","attributeBackgroundColorOdd":"#FFFFFF","attributeBackgroundColorEven":"#F4F2F3","actorBkg":"#FFFFFF","actorBorder":"#FF9EC4","actorTextColor":"#43222F","actorLineColor":"#AA9CA1","signalColor":"#FF9EC4","signalTextColor":"#43222F","labelBoxBkgColor":"#FFFFFF","labelBoxBorderColor":"#FF9EC4","labelTextColor":"#43222F","loopTextColor":"#43222F","noteBkgColor":"#FFF0F6","noteTextColor":"#43222F","noteBorderColor":"#FF9EC4","activationBkgColor":"#FF9EC4","activationBorderColor":"#FF9EC4"}}}%%
+%% palette 24b50cd8
 stateDiagram-v2
     state "In progress" as InProgress
     state "Finished" as Finished
@@ -282,8 +282,8 @@ stateDiagram-v2
     Finished --> Finished : edit
     Finished --> [*]
 
-    classDef live fill:#10241A,stroke:#22C55E,color:#F8FAFC
-    classDef done fill:#2A2410,stroke:#EAB308,color:#F8FAFC
+    classDef live fill:#FFEFF6,stroke:#FF9EC4,color:#43222F
+    classDef done fill:#FAF1DE,stroke:#E0A92E,color:#43222F
     class InProgress live
     class Finished done
 ```

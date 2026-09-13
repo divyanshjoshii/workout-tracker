@@ -7,13 +7,13 @@
 A mobile-first PWA for logging gym sessions: splits, templates, supersets,
 dropsets, rest timers, body weight, and per-exercise strength progression.
 
-![Next.js](https://img.shields.io/badge/Next.js-16.2-22C55E?style=flat-square&logo=nextdotjs&logoColor=white&labelColor=0B0F14)
-![React](https://img.shields.io/badge/React-19.2-22C55E?style=flat-square&logo=react&logoColor=white&labelColor=0B0F14)
-![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20RLS-22C55E?style=flat-square&logo=supabase&logoColor=white&labelColor=0B0F14)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-22C55E?style=flat-square&logo=typescript&logoColor=white&labelColor=0B0F14)
-![Tailwind](https://img.shields.io/badge/Tailwind-4-22C55E?style=flat-square&logo=tailwindcss&logoColor=white&labelColor=0B0F14)
-![Vercel](https://img.shields.io/badge/Vercel-deployed-22C55E?style=flat-square&logo=vercel&logoColor=white&labelColor=0B0F14)
-![PWA](https://img.shields.io/badge/PWA-installable-22C55E?style=flat-square&logo=pwa&logoColor=white&labelColor=0B0F14)
+![Next.js](https://img.shields.io/badge/Next.js-16.2-FF9EC4?style=flat-square&logo=nextdotjs&logoColor=white&labelColor=43222F)
+![React](https://img.shields.io/badge/React-19.2-FF9EC4?style=flat-square&logo=react&logoColor=white&labelColor=43222F)
+![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20RLS-FF9EC4?style=flat-square&logo=supabase&logoColor=white&labelColor=43222F)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-FF9EC4?style=flat-square&logo=typescript&logoColor=white&labelColor=43222F)
+![Tailwind](https://img.shields.io/badge/Tailwind-4-FF9EC4?style=flat-square&logo=tailwindcss&logoColor=white&labelColor=43222F)
+![Vercel](https://img.shields.io/badge/Vercel-deployed-FF9EC4?style=flat-square&logo=vercel&logoColor=white&labelColor=43222F)
+![PWA](https://img.shields.io/badge/PWA-installable-FF9EC4?style=flat-square&logo=pwa&logoColor=white&labelColor=43222F)
 
 </div>
 
@@ -37,8 +37,8 @@ Next.js App Router on Vercel, with Supabase for auth and Postgres.
 <!-- Diagram colours come from src/app/globals.css and the app icon. Keep them in sync. -->
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"background": "#0B0F14", "primaryColor": "#151A21", "primaryTextColor": "#F8FAFC", "primaryBorderColor": "#22C55E", "lineColor": "#22C55E", "secondaryColor": "#1E293B", "tertiaryColor": "#0B0F14", "textColor": "#F8FAFC", "edgeLabelBackground": "#0B0F14", "clusterBkg": "#0B0F14", "clusterBorder": "#1E293B", "titleColor": "#F8FAFC"}}}%%
-%% palette 219897bf
+%%{init: {"theme":"base","themeVariables":{"background":"#FFFFFF","primaryColor":"#FFFFFF","primaryTextColor":"#43222F","primaryBorderColor":"#FF9EC4","lineColor":"#FF9EC4","secondaryColor":"#FFF3F8","tertiaryColor":"#FFFFFF","textColor":"#43222F","edgeLabelBackground":"#FFFFFF","clusterBkg":"#FFFFFF","clusterBorder":"#D9D3D5","titleColor":"#43222F","rowOdd":"#FFFFFF","rowEven":"#F4F2F3","attributeBackgroundColorOdd":"#FFFFFF","attributeBackgroundColorEven":"#F4F2F3","actorBkg":"#FFFFFF","actorBorder":"#FF9EC4","actorTextColor":"#43222F","actorLineColor":"#AA9CA1","signalColor":"#FF9EC4","signalTextColor":"#43222F","labelBoxBkgColor":"#FFFFFF","labelBoxBorderColor":"#FF9EC4","labelTextColor":"#43222F","loopTextColor":"#43222F","noteBkgColor":"#FFF0F6","noteTextColor":"#43222F","noteBorderColor":"#FF9EC4","activationBkgColor":"#FF9EC4","activationBorderColor":"#FF9EC4"}}}%%
+%% palette 24b50cd8
 flowchart LR
     subgraph device ["Your phone"]
         PWA["Installed PWA"]
@@ -63,17 +63,17 @@ flowchart LR
     Pages -->|reads, in parallel| DB
     Actions -->|writes| DB
 
-    classDef phone fill:#0E1E2C,stroke:#38BDF8,color:#F8FAFC
-    classDef server fill:#10241A,stroke:#22C55E,color:#F8FAFC
-    classDef auth fill:#2A1020,stroke:#EC4899,color:#F8FAFC
-    classDef db fill:#1C162E,stroke:#8B5CF6,color:#F8FAFC
+    classDef phone fill:#E5EFF8,stroke:#5B9BD5,color:#43222F
+    classDef server fill:#FFEFF6,stroke:#FF9EC4,color:#43222F
+    classDef auth fill:#FBE4ED,stroke:#E8588F,color:#43222F
+    classDef db fill:#FAF1DE,stroke:#E0A92E,color:#43222F
     class PWA,SW phone
     class Proxy,Pages,Actions server
     class Auth auth
     class DB db
-    style device fill:#0B0F14,stroke:#38BDF8,color:#38BDF8
-    style vercel fill:#0B0F14,stroke:#22C55E,color:#22C55E
-    style supa fill:#0B0F14,stroke:#8B5CF6,color:#8B5CF6
+    style device fill:#FFFFFF,stroke:#5B9BD5,color:#43222F
+    style vercel fill:#FFFFFF,stroke:#FF9EC4,color:#43222F
+    style supa fill:#FFFFFF,stroke:#E0A92E,color:#43222F
 ```
 
 > [!NOTE]

@@ -21,11 +21,9 @@ signed-in screens have only been built and type-checked, not seen.
 4. Find out whether `migration_performance.sql` has run. The eight indexes it
    creates show up in `pg_indexes` if it has. Save
    `select * from pg_policies where schemaname = 'public'` before running it.
-5. The Mermaid diagrams in the README and `docs/` still use the old dark green
-   palette. `architecture.md` says to keep them in step with `globals.css`.
-6. The hall of fame editor loads all 873 exercises into the browser when its
+5. The hall of fame editor loads all 873 exercises into the browser when its
    dialog opens, which `standards.md` says to avoid.
-7. The heaviest pages are exercise detail (365 KB gzipped) and Progress
+6. The heaviest pages are exercise detail (365 KB gzipped) and Progress
    (324 KB), both because recharts loads with them. Loading the charts on demand
    would be the next cut.
 

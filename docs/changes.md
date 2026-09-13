@@ -159,3 +159,7 @@
   kitty on the clock sits where the sign-out button was.
 - New icons were rendered from the kitty's face with the image renderer bundled
   in Next, replacing the green W. `favicon.ico` holds a single 48px PNG.
+- Recoloured the five Mermaid diagrams and the README badges to the pink
+  palette. Structure is unchanged. The data model's relationship labels now
+  sit on grey chips in GitHub's dark theme instead of its light one; that chip
+  is Mermaid's and no theme colour removes it.
